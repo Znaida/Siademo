@@ -1,8 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; // Inyectamos ChangeDetectorRef
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { jwtDecode } from 'jwt-decode';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-usuarios-lista',
@@ -14,7 +15,7 @@ import { jwtDecode } from 'jwt-decode';
 export class UsuariosLista implements OnInit {
   public listaUsuarios: any[] = [];
   public userName: string = '';
-  private apiUrl = 'http://localhost:8000';
+  private apiUrl = environment.apiUrl;
 
   constructor(
     private http: HttpClient, 

@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { RadicadoService } from './services/radicado';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -45,7 +46,7 @@ export class App implements OnInit {
 
   // --- ESTA ES LA FUNCIÓN QUE TE FALTABA ---
   verArchivo(numero: string) {
-    const url = `http://localhost:8000/descargar/${numero}`;
+    const url = `${environment.apiUrl}/descargar/${numero}`;
     window.open(url, '_blank');
   }
 
