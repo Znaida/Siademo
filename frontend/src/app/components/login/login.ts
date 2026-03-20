@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { timeout, finalize } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -25,8 +26,7 @@ export class Login implements OnInit {
     codigo2fa: ''
   };
 
-  // Usamos la IP directa para evitar el Connection Reset por IPv6
-  private apiUrl = 'http://127.0.0.1:8000';
+  private apiUrl = environment.apiUrl;
 
   constructor(
     private http: HttpClient, 
