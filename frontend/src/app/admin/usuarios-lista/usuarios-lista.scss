@@ -1,0 +1,80 @@
+.user-list-container {
+  padding: 20px;
+  background-color: #f4f7f6;
+  min-height: 100vh;
+
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    
+    .back-btn {
+      padding: 10px 20px;
+      background: #1d8cf8;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+      &:hover { background: #1172d1; }
+    }
+  }
+
+  .status-btn {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+
+  &.btn-deactivate {
+    background-color: #ffdce0;
+    color: #d32f2f;
+    &:hover { background-color: #ffcdd2; }
+  }
+
+  &.btn-activate {
+    background-color: #e8f5e9;
+    color: #388e3c;
+    &:hover { background-color: #c8e6c9; }
+  }
+}
+
+  .table-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      
+      th {
+        background-color: #f8f9fa;
+        padding: 15px;
+        text-align: left;
+        color: #34495e;
+        border-bottom: 2px solid #edf2f7;
+      }
+
+      td {
+        padding: 15px;
+        border-bottom: 1px solid #edf2f7;
+        color: #4a5568;
+      }
+
+      .role-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: bold;
+        &.role-admin { background: #e3f2fd; color: #1976d2; }
+        &.role-jefe { background: #f3e5f5; color: #7b1fa2; }
+        &.role-ops { background: #e8f5e9; color: #388e3c; }
+      }
+    }
+  }
+}

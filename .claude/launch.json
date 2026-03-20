@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Angular)",
+      "runtimeExecutable": "wsl",
+      "runtimeArgs": ["bash", "-c", "cd /home/zenaida/KronosZnd/frontend && npm start"],
+      "port": 4200
+    },
+    {
+      "name": "Backend (FastAPI)",
+      "runtimeExecutable": "wsl",
+      "runtimeArgs": ["bash", "-c", "cd /home/zenaida/KronosZnd/backend && ./venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000"],
+      "port": 8000
+    }
+  ]
+}

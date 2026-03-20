@@ -1,0 +1,36 @@
+# ===== PYTHON / BACKEND =====
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/.env
+backend/.env.*
+.env
+.env.*
+backend/qr_acceso_admin.png
+
+# ===== BASE DE DATOS Y ARCHIVOS SUBIDOS =====
+# No subir datos reales al repo
+storage/database.db
+storage/uploads/
+storage/*.pdf
+storage/*.docx
+storage/*.xlsx
+storage/*.png
+storage/*.jpg
+
+# ===== NODE / ANGULAR =====
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# ===== SISTEMA OPERATIVO =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.suo
+*.user

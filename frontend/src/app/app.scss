@@ -1,0 +1,47 @@
+.container {
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  border: 1px solid #e9ecef;
+
+  input {
+    margin-right: 10px;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    outline: none;
+    &:focus { border-color: #007bff; }
+  }
+}
+
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.3s;
+  
+  &:disabled { background: #ccc; cursor: not-allowed; }
+  &:hover:not(:disabled) { background: #0056b3; }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  th { text-align: left; padding: 12px; border-bottom: 2px solid #dee2e6; color: #495057; }
+  td { padding: 12px; border-bottom: 1px solid #eee; }
+}

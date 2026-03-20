@@ -1,0 +1,54 @@
+<div class="user-list-container">
+  <div class="header-section">
+    <h2>👥 Gestión de Cuentas: <span class="admin-name">{{ userName }}</span></h2>
+    <p>Visualización jerárquica de colaboradores y roles asignados según la matriz de seguridad.</p>
+    <button class="back-btn" (click)='regresar()'>⬅️ Volver al Dashboard</button>
+  </div>
+
+  <div class="table-card">
+    <table class="user-table" *ngIf="listaUsuarios.length > 0">
+      <thead>
+        <tr>
+          <th>Nombre Completo</th>
+          <th>Usuario / Acceso</th>
+          <th>Rol Asignado</th>
+          <th>Estado Actual</th>
+          <th>Acciones de Seguridad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of listaUsuarios">
+          <td class="td-name">{{ user.nombre_completo }}</td>
+          <td><code>{{ user.usuario }}</code></td>
+          <td>
+            <span class="role-badge" [ngClass]="getRoleClass(user.rol_id)">
+              {{ getRoleName(user.rol_id) }}
+            </span>
+          </td>
+          <td>
+            <div class="status-wrapper">
+              <span class="status-dot" [class.active]="user.activo"></span>
+              {{ user.activo ? 'Cuenta Activa' : 'Cuenta Suspendida' }}
+            </div>
+          </td>
+          <td class="td-actions">
+            <button 
+              class="status-btn" 
+              [ngClass]="user.activo ? 'btn-deactivate' : 'btn-activate'"
+              [title]="user.activo ? 'Deshabilitar acceso al sistema' : 'Habilitar acceso al sistema'"
+              (click)="toggleEstadoUsuario(user)">
+              {{ user.activo ? '🚫 Desactivar' : '✅ Activar' }}
+            </button>
+            <button class="settings-btn" title="Configurar permisos avanzados">⚙️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div *ngIf="listaUsuarios.length === 0" class="empty-state">
+      <div class="empty-icon">📂</div>
+      <p>No se encontraron cuentas asociadas. Verifique que existan usuarios con roles entre 1 y 4 en la base de datos.</p>
+      <button class="refresh-btn" (click)="cargarUsuarios()">🔄 Reintentar Carga</button>
+    </div>
+  </div>
+</div>

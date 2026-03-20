@@ -1,0 +1,102 @@
+$primary-blue: #2563eb;
+$dark-slate: #0f172a;
+
+.login-page {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+  padding: 1rem;
+}
+
+.login-card {
+  background: white;
+  padding: 5rem; // Espacio masivo interno
+  border-radius: 4rem; // Curvas más pronunciadas
+  width: 100%;
+  max-width: 650px; // Aumentado significativamente
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+/* --- TEXTOS Y FUENTES GIGANTES --- */
+.header h1 { 
+  font-size: 4rem !important; // SIADE imponente
+  font-weight: 900;
+  letter-spacing: -4px;
+  color: $dark-slate;
+  margin: 0;
+}
+
+.input-group {
+  text-align: left;
+  margin-bottom: 2.5rem;
+  label { 
+    font-size: 1.1rem !important; // Etiqueta mucho más legible
+    font-weight: 900;
+    color: #94a3b8;
+    margin-left: 2rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.8rem;
+  }
+  input { 
+    width: 100%; 
+    padding: 1.6rem 2.5rem !important; // Inputs más altos y anchos
+    background: #f1f5f9;
+    border: 3px solid transparent; 
+    border-radius: 3rem; 
+    font-size: 1.6rem !important; // Texto gigante al escribir
+    font-weight: 700;
+    transition: all 0.2s;
+    &:focus { border-color: $primary-blue; background: white; outline: none; }
+  }
+}
+
+/* --- BOTÓN TACTIL XL (REQUISITO 1.7) --- */
+.login-btn {
+  width: 100%;
+  padding: 1.8rem !important;
+  background: $primary-blue;
+  color: white;
+  border-radius: 3rem;
+  font-size: 1.8rem !important; // Botón con gran visibilidad
+  font-weight: 900;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  border-bottom: 12px solid #1e40af; // Relieve mecánico profundo
+  transition: all 0.1s;
+  
+  &:active:not(:disabled) { 
+    transform: translateY(6px); 
+    border-bottom-width: 0; 
+  }
+}
+
+/* --- RETO MATEMÁTICO GIGANTE --- */
+.captcha-box {
+  background: #f8fafc;
+  padding: 2.5rem;
+  border-radius: 3rem;
+  border: 4px dashed #cbd5e1;
+  margin-bottom: 2.5rem;
+  
+  .math-question {
+    font-size: 3.5rem !important; // Operación muy grande
+    font-weight: 900;
+    color: $dark-slate;
+    display: inline-block;
+    margin-right: 1.5rem;
+  }
+
+  input {
+    width: 120px !important; // Espacio para el resultado
+    font-size: 2.5rem !important;
+    padding: 1rem !important;
+    border-radius: 1.5rem !important;
+    text-align: center;
+    border: 4px solid #e2e8f0 !important;
+  }
+}

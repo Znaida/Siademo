@@ -1,0 +1,11 @@
+@use "tailwindcss";
+
+/* SEGÚN TU IMAGEN: 
+   Desde 'src/styles.scss', entramos a la carpeta 'app' para buscar todo.
+*/
+@source "./app/**/*.{html,ts}";
+
+/* Prueba física de carga */
+body {
+  border: 15px solid #2563eb !important; 
+}

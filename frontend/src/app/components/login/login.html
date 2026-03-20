@@ -1,0 +1,88 @@
+<div class="login-page">
+  <div class="login-card">
+    
+    <div class="header" style="margin-bottom: 2.5rem;">
+      <div class="shield-icon" style="font-size: 4rem; margin-bottom: 1rem; filter: drop-shadow(0 10px 15px rgba(37, 99, 235, 0.3));">🛡️</div>
+      <h1 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -2px; color: #0f172a; margin: 0;">SIADE</h1>
+      <p style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; color: #64748b; tracking-widest: 0.2em;">Gestión Documental Segura</p>
+    </div>
+
+    <div class="instruction-box warning" *ngIf="mensajeSeguridad && !paso2" 
+         style="background: #fff1f2; border-left: 4px solid #f43f5e; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem;">
+      <p style="font-size: 0.8rem; color: #9f1239; font-weight: 700; margin: 0;">
+        🛡️ <strong>ACCESO RESTRINGIDO:</strong> Credenciales requeridas.
+      </p>
+    </div>
+
+    <div class="instruction-box" *ngIf="!mensajeSeguridad" 
+         style="background: #f1f5f9; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem;">
+      <p style="font-size: 0.8rem; color: #475569; font-weight: 700; margin: 0;" *ngIf="!paso2">
+        Resuelva el reto matemático para continuar.
+      </p>
+      <p style="font-size: 0.8rem; color: #2563eb; font-weight: 800; margin: 0;" *ngIf="paso2">
+        Ingrese el código de 6 dígitos de su App Móvil.
+      </p>
+    </div>
+
+    <form (ngSubmit)="intentarLogin($event)">
+      
+      <div *ngIf="!paso2" class="animate-in fade-in duration-500">
+        <div class="input-group">
+          <label>Usuario del Sistema</label>
+          <input type="text" name="usuario" [(ngModel)]="loginData.usuario" 
+                 placeholder="Ej: zenaida_admin" required autocomplete="username">
+        </div>
+
+        <div class="input-group">
+          <label>Contraseña de Acceso</label>
+          <input type="password" name="password" [(ngModel)]="loginData.password" 
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <div class="captcha-box" *ngIf="captchaPregunta; else cargandoCaptcha">
+          <label style="display: block; font-size: 0.65rem; font-weight: 900; color: #94a3b8; margin-bottom: 1rem; text-transform: uppercase;">Reto de Integridad</label>
+          <div class="captcha-row" style="display: flex; align-items: center; justify-content: center; gap: 1.5rem;">
+            <span class="math-question" style="font-size: 1.8rem; font-weight: 900; color: #0f172a;">{{ captchaPregunta }}</span>
+            <input type="number" name="captchaRespuesta" [(ngModel)]="loginData.captchaRespuesta" 
+                   style="width: 70px; padding: 0.8rem; border-radius: 1rem; border: 2px solid #e2e8f0; text-align: center; font-weight: 900; font-size: 1.2rem;" 
+                   placeholder="?" required>
+            <button type="button" class="btn-refresh" (click)="obtenerCaptcha()" 
+                    style="background: #f8fafc; border: none; font-size: 1.2rem; cursor: pointer; padding: 0.5rem; border-radius: 0.8rem; box-shadow: 0 4px 0 #e2e8f0; transition: all 0.1s;"
+                    onmousedown="this.style.transform='translateY(2px)'; this.style.boxShadow='none'"
+                    onmouseup="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 0 #e2e8f0'">🔄</button>
+          </div>
+        </div>
+        
+        <ng-template #cargandoCaptcha>
+          <div class="captcha-loading" style="padding: 2rem; background: #f8fafc; border-radius: 2rem; border: 2px dashed #cbd5e1;">
+            <p style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin: 0;">
+              ⏳ Conectando con el servidor de seguridad...
+            </p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="section-2fa animate-in zoom-in duration-300" *ngIf="paso2">
+        <div class="input-group">
+          <label>Token de Seguridad (TOTP)</label>
+          <input type="text" name="codigo2fa" [(ngModel)]="loginData.codigo2fa" 
+                 placeholder="000 000" maxlength="6" 
+                 style="text-align: center; letter-spacing: 0.5em; font-size: 1.5rem; font-family: monospace;" required>
+        </div>
+      </div>
+
+      <button type="submit" class="login-btn" [disabled]="cargando">
+        {{ cargando ? 'Verificando...' : (paso2 ? 'Validar y Entrar' : 'Continuar') }}
+      </button>
+      
+      <button type="button" class="back-link" *ngIf="paso2" (click)="paso2 = false"
+              style="margin-top: 1.5rem; background: none; border: none; color: #2563eb; font-weight: 800; font-size: 0.75rem; cursor: pointer; text-transform: uppercase;">
+        ← Volver al inicio
+      </button>
+    </form>
+
+    <div class="footer-info" style="margin-top: 3rem; font-size: 0.65rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em;">
+      Acceso exclusivo para personal autorizado de KronosZnd
+    </div>
+  </div>
+</div>

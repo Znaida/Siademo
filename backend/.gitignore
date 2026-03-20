@@ -1,0 +1,28 @@
+# Entornos virtuales (Muy importante para que no suba gigas de basura)
+venv/
+env/
+.venv/
+
+# Archivos de configuración con credenciales (SECRETOS)
+.env
+*.env
+secrets.json
+
+# Cache de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de datos local (si usas SQLite)
+*.sqlite3
+*.db
+
+# Archivos de sistema y VS Code
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Archivos temporales de procesamiento de Kronos
+temp/
+outputs/
+*.log

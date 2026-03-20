@@ -1,0 +1,666 @@
+// --- IMPORTACIÓN DE MÓDULOS MODERNOS (Elimina los warnings) ---
+@use "sass:color"; 
+
+// --- VARIABLES ---
+$primary-blue: #2563eb;
+$siade-dark-blue: #1a2b4b; 
+$bg-light: #f8fafc;
+$success-green: #16a34a;
+$danger-red: #ef4444;
+$purple-siade: #7c3aed;
+$amber-radicador: #d97706;
+$slate-consultor: #475569;
+$border-color: #f1f5f9;
+$warning-yellow: #fffde7; // Para parametrización de TRD
+
+// --- ESTRUCTURA DE LA PÁGINA ---
+.dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: $bg-light;
+}
+
+aside {
+  width: 18rem; 
+  height: 100vh; 
+  position: fixed;
+  background: $siade-dark-blue;
+  color: white;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  .brand-section {
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      background: $primary-blue;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .brand-text {
+      h1 { font-size: 1.1rem; font-weight: 900; margin: 0; letter-spacing: 0.5px; }
+      p { font-size: 0.7rem; opacity: 0.5; margin: 0; font-weight: 400; }
+    }
+  }
+
+  nav {
+    padding: 1.5rem 1rem;
+    flex: 1;
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 0.9rem 1.2rem;
+      margin-bottom: 0.4rem;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      font-size: 0.9rem;
+      opacity: 0.35; 
+      color: rgba(255, 255, 255, 0.8);
+
+      &.active {
+        opacity: 1;
+        color: white;
+        &:hover { background: rgba(255, 255, 255, 0.08); }
+      }
+
+      &.selected {
+        background: rgba($primary-blue, 0.25);
+        color: white;
+        opacity: 1;
+        border-left: 4px solid $primary-blue;
+      }
+
+      .icon { 
+        font-size: 1.1rem; 
+        width: 20px; 
+        display: flex;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+main {
+  margin-left: 18rem; 
+  flex: 1;
+  padding: 3rem;
+  background-color: $bg-light;
+  z-index: 10;
+}
+
+// --- VISTA DE CONFIGURACIÓN ---
+.config-view-wrapper {
+  margin: -3rem; 
+  display: flex;
+  flex-direction: column;
+
+  .config-header {
+    background: white;
+    padding: 2.5rem 3rem 1rem 3rem;
+    
+    h2 { font-size: 1.8rem; font-weight: 900; color: $siade-dark-blue; margin: 0; }
+    p { color: #64748b; font-weight: 600; font-size: 0.9rem; margin-top: 0.3rem; }
+  }
+
+  .config-tabs-nav {
+    background: white;
+    display: flex;
+    padding: 0 3rem;
+    border-bottom: 2px solid $border-color;
+
+    .tab-item {
+      padding: 1.2rem 1.5rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #64748b;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+
+      &:hover { color: $primary-blue; }
+
+      &.active {
+        color: $primary-blue;
+        &::after {
+          content: "";
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: $primary-blue;
+        }
+      }
+    }
+  }
+
+  .config-tab-content {
+    padding: 3rem;
+    .content-card {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+// --- DISEÑO DE ESTRUCTURA ORGÁNICA ---
+.entity-data-box {
+  padding: 2rem;
+  border-radius: 1.2rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+}
+
+.section-subtitle {
+  font-weight: 800;
+  color: $siade-dark-blue;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.entity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+// Cuadrícula de 4 columnas para el formulario de Retención
+.trd-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  margin-top: 1rem;
+}
+
+// Caja amarilla para Llaves de Búsqueda
+.search-keys-box {
+  margin-top: 1.5rem;
+  background: $warning-yellow;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #fbc02d;
+  
+  h5 {
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #f57f17;
+    margin-bottom: 1rem;
+  }
+}
+
+.siade-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #94a3b8;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.siade-select, .siade-input {
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  border-radius: 2rem;
+  background: #f1f5f9;
+  border: 2px solid transparent;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  appearance: none; 
+  transition: all 0.2s ease;
+  &:focus { border-color: $primary-blue; background: white; }
+}
+
+// Estilo específico para los cuadros de texto largos
+textarea.siade-input {
+  resize: none;
+  border-radius: 1rem;
+  height: 100px;
+}
+
+// --- DISEÑO DE ROLES DE USUARIO ---
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.role-card {
+  background: white;
+  border: 1px solid;
+  border-radius: 1.2rem;
+  padding: 1.8rem;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+  }
+
+  .role-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    h4 { margin: 0; font-size: 1.3rem; font-weight: 900; }
+    .level-tag {
+      color: white; font-size: 0.65rem; font-weight: 800;
+      padding: 0.3rem 0.8rem; border-radius: 50px; text-transform: uppercase;
+    }
+  }
+
+  .role-permissions-list {
+    list-style: none; padding: 0; margin: 0;
+    li {
+      display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;
+      font-weight: 600; color: #475569; font-size: 0.85rem;
+      .check-icon { font-weight: 900; font-size: 1rem; }
+    }
+  }
+}
+
+// --- COMPONENTES DE TABLA ---
+.siade-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+
+  th { 
+    padding: 1rem; 
+    color: #94a3b8; 
+    font-size: 0.75rem; 
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  td { 
+    background: #fcfcfd;
+    padding: 1.25rem 1rem; 
+    font-weight: 700; 
+    border-top: 1px solid #edf2f7;
+    border-bottom: 1px solid #edf2f7;
+
+    &:first-child { border-left: 1px solid #edf2f7; border-radius: 1rem 0 0 1rem; }
+    &:last-child { border-right: 1px solid #edf2f7; border-radius: 0 1rem 1rem 0; }
+    
+    // Estilo para identificadores de usuario
+    &.user-id-cell {
+      font-family: 'JetBrains Mono', monospace;
+      color: $primary-blue;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// --- INDICADORES (Badges) ---
+.badge-siade {
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &::before { content: "●"; font-size: 0.8rem; } // Punto indicador de estado
+
+  &.status-activo { background-color: #e6f7ed; color: #16a34a; }
+  &.status-suspendido { background-color: #fef2f2; color: #ef4444; }
+  &.role-admin { background-color: #eff6ff; color: #2563eb; }
+  &.role-productor, &.role-archivista { background-color: #f5f3ff; color: #7c3aed; }
+}
+
+// --- BOTONES ---
+.btn-siade {
+  cursor: pointer;
+  border: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  border-radius: 2rem;
+  padding: 1rem 1.5rem;
+  transition: all 0.1s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  
+  &.primary { 
+    background: $primary-blue; color: white; 
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4); 
+  }
+  
+  &.secondary { 
+    background: white; color: $primary-blue; border: 2px solid $primary-blue; 
+  }
+
+  // Variante para plantillas (Gris pizarra)
+  &.slate {
+    background: $slate-consultor; color: white;
+    // AJUSTE: Reemplazo de lighten()
+    &:hover { background: color.adjust($slate-consultor, $lightness: 10%); }
+  }
+  
+  &:active { transform: translateY(1px); }
+}
+
+// --- MODALES (Prioridad Máxima) ---
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(10px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important; 
+}
+
+.modal-card {
+  background: white !important;
+  border-radius: 2.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden;
+  width: 90% !important;
+  max-width: 600px;
+  position: relative;
+  z-index: 10000 !important; 
+  &.large { max-width: 1000px; }
+}
+
+// --- FOOTER DE PERFIL ---
+.sidebar-footer {
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .user-avatar {
+    width: 42px; height: 42px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: white; border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .user-details {
+    flex: 1; overflow: hidden;
+    .name { display: block; font-size: 0.85rem; font-weight: 800; }
+    .role { display: block; font-size: 0.65rem; opacity: 0.5; }
+  }
+
+  .config-btn {
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    &:hover { transform: rotate(45deg); opacity: 0.8; }
+  }
+}
+
+// ==========================================
+// --- [NUEVO] AJUSTES DE CONTROL DE ACCESO ---
+// ==========================================
+
+.config-btn-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.6rem;
+  border-radius: 0.8rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(1.15);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  &.deactivate { color: $danger-red; }
+  &.activate { color: $success-green; }
+}
+
+// Mejora visual para la columna de acciones
+.siade-table .actions-cell {
+  width: 80px;
+  text-align: center;
+}
+
+// ==========================================
+// --- [NUEVO] GESTIÓN DE EQUIPOS (SIADE) ---
+// ==========================================
+
+.team-btn-action {
+  @extend .config-btn-action; 
+  // AJUSTE: Reemplazo de darken()
+  color: color.adjust($primary-blue, $lightness: -10%);
+  
+  &:hover {
+    background: rgba($primary-blue, 0.1);
+    color: color.adjust($primary-blue, $lightness: -15%);
+  }
+}
+
+.team-badge {
+  background: rgba($primary-blue, 0.1);
+  color: $primary-blue;
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: 1px solid rgba($primary-blue, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.modal-header-teams {
+  background: $primary-blue;
+  padding: 2rem;
+  color: white;
+  text-align: center;
+  
+  h4 { 
+    font-weight: 900; 
+    text-transform: uppercase; 
+    margin: 0; 
+    letter-spacing: 1px;
+  }
+  
+  p { 
+    font-size: 0.8rem; 
+    opacity: 0.8; 
+    margin-top: 0.5rem; 
+    font-weight: 600;
+  }
+}
+
+.group-selection-centered {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; // Alinea el bloque al centro pero mantiene icono-texto juntos
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 350px; // Limita el ancho para que el centrado se note
+  padding: 1.2rem;
+  border-radius: 1rem;
+  background: #f1f5f9;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: color.adjust($primary-blue, $lightness: 45%);
+    transform: scale(1.02);
+  }
+
+  input[type="checkbox"] {
+    width: 24px;  // Más grande
+    height: 24px; // Más grande
+    cursor: pointer;
+    accent-color: $primary-blue;
+  }
+
+  label {
+    font-weight: 800; // Más negrita
+    color: $siade-dark-blue;
+    cursor: pointer;
+    font-size: 1.1rem; // Texto más grande
+    margin: 0;
+  }
+}
+
+.tab-item {
+  padding: 1rem 1.5rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    color: #2563eb;
+    background: #f8fafc;
+  }
+
+  &.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb; // Subrayado azul de la imagen
+    background: transparent;
+  }
+}
+
+.ventanilla-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px; 
+  gap: 3rem;
+  align-items: start; /* Alinea al inicio para permitir el scroll independiente */
+  position: relative;
+}
+
+.preview-sidebar {
+  position: relative;
+  height: 100%; /* Permite que el sticker tenga "pista" para deslizarse */
+}
+
+.sticker-sticky-card {
+  position: sticky;
+  top: 2rem; /* Distancia desde el tope del navegador al scrollear */
+  z-index: 50;
+  background: rgb(228, 142, 142);
+  padding: 2.5rem;
+  border-radius: 2rem;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+  text-align: center;
+  border: 1px solid #f1f5f9;
+}
+
+.siade-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.2rem; }
+.siade-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.2rem; }
+.siade-row-1 { display: block; margin-bottom: 1.2rem; }
+
+/* Sección de Adjuntos */
+.upload-zone.dashed {
+  border: 2px dashed #cbd5e1;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  text-align: center;
+  color: #64748b;
+  margin-bottom: 1rem;
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+/* Botones Inferiores */
+.btn-flow-purple {
+  width: 100%;
+  padding: 1.2rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #7c3aed;
+  border-radius: 1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: #ede9fe; }
+}
+
+.form-actions-footer {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 5rem;
+
+  .btn-save-draft {
+    flex: 1;
+    background: #e2e8f0;
+    border: none;
+    padding: 1.2rem;
+    border-radius: 1rem;
+    font-weight: 800;
+    color: #475569;
+  }
+
+  .btn-radicate-blue {
+    flex: 2;
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 1.2rem;
+    border-radius: 1rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+  }
+}
+
+.qr-box {
+  width: 160px;
+  height: 160px;
+  background: #f8fafc;
+  margin: 1.5rem auto;
+  border-radius: 1rem;
+  border: 2px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
