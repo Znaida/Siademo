@@ -230,8 +230,8 @@ origins = [
     "http://127.0.0.1:4200",
     "http://localhost",
     "http://127.0.0.1",
-    # Azure Static Web App (actualizar con la URL real después del primer deploy)
-    "https://siade-frontend.azurestaticapps.net",
+    # Azure Static Web App
+    "https://ashy-desert-090fd4a0f.2.azurestaticapps.net",
     "https://siade-backend.azurewebsites.net",
 ]
 
