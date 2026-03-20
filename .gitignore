@@ -29,6 +29,9 @@ frontend/.angular/
 Thumbs.db
 desktop.ini
 
+# ===== CLAUDE CODE =====
+.claude/
+
 # ===== IDE =====
 .vscode/
 .idea/
