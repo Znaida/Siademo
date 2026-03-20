@@ -27,17 +27,18 @@ load_dotenv()
 def get_db_connection():
     # Detectamos la ruta según el entorno
     if os.getenv("WEBSITE_HOSTNAME"):
-        # Ruta persistente en Azure
+        # Ruta persistente en Azure (/home persiste entre reinicios)
         db_path = "/home/site/wwwroot/storage/database.db"
     else:
-        # Ruta en tu PC local (dentro de la carpeta storage que me mostraste)
+        # Ruta en PC local
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         db_path = os.path.join(BASE_DIR, "..", "storage", "database.db")
-    
-    # Conectamos usando sqlite3
+
+    # CRÍTICO: Crear el directorio si no existe (necesario en Azure primer arranque)
+    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+
     conn = sqlite3.connect(db_path)
-    # Esto es para que se comporte como psycopg2 y puedas usar nombres de columnas
-    conn.row_factory = sqlite3.Row 
+    conn.row_factory = sqlite3.Row
     return conn
 
 def inicializar_db_alfa():
@@ -225,14 +226,19 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- 2. CONFIGURACIÓN DE CORS ---
-origins = [
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
-    "http://localhost",
-    "http://127.0.0.1",
+#origins = [
+#    "http://localhost:4200",
+#    "http://127.0.0.1:4200",
+#    "http://localhost",
+#    "http://127.0.0.1",
     # Azure
+#    "https://ashy-desert-090fd4a0f.2.azurestaticapps.net",
+#    "https://kronosdemos-fbeyekffbfe9fre7.brazilsouth-01.azurewebsites.net",
+#]
+
+origins = [
     "https://ashy-desert-090fd4a0f.2.azurestaticapps.net",
-    "https://kronosdemos-fbeyekffbfe9fre7.brazilsouth-01.azurewebsites.net",
+    "http://localhost:4200", # Por si pruebas localmente con Angular
 ]
 
 app.add_middleware(

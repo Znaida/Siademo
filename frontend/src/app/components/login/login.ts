@@ -96,7 +96,7 @@ export class Login implements OnInit {
 
     this.http.post<any>(`${this.apiUrl}/${endpoint}`, formData)
       .pipe(
-        timeout(8000), // Margen para el procesador i3-N305
+        timeout(8000), 
         finalize(() => {
           this.cargando = false;
           this.cd.detectChanges();
