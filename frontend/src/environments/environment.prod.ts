@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://siade-backend.azurewebsites.net'
+  apiUrl: 'https://kronosdemos-fbeyekffbfe9fre7.brazilsouth-01.azurewebsites.net'
 };

@@ -230,9 +230,9 @@ origins = [
     "http://127.0.0.1:4200",
     "http://localhost",
     "http://127.0.0.1",
-    # Azure Static Web App
+    # Azure
     "https://ashy-desert-090fd4a0f.2.azurestaticapps.net",
-    "https://siade-backend.azurewebsites.net",
+    "https://kronosdemos-fbeyekffbfe9fre7.brazilsouth-01.azurewebsites.net",
 ]
 
 app.add_middleware(
