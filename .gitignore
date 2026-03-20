@@ -32,6 +32,12 @@ desktop.ini
 # ===== CLAUDE CODE =====
 .claude/
 
+# ===== SCRIPTS SENSIBLES (solo uso local) =====
+backend/crear_admin.py
+backend/generar_hash.py
+backend/debug_db.py
+backend/revisar_datos.py
+
 # ===== IDE =====
 .vscode/
 .idea/

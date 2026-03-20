@@ -416,7 +416,47 @@ def generar_consecutivo(prefijo: str):
     finally:
         cur.close(); conn.close()
 
-# --- 7. ENDPOINTS DE AUTENTICACIÓN ---
+# --- 7. SETUP INICIAL (solo funciona si no hay ningún admin) ---
+
+@app.post("/admin/setup")
+async def setup_inicial():
+    """Crea el primer administrador usando variables de entorno de Azure.
+    Solo funciona una vez — si ya existe un admin (rol_id=0), retorna error 403."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) as total FROM usuarios WHERE rol_id = 0")
+        if cur.fetchone()['total'] > 0:
+            raise HTTPException(status_code=403, detail="El sistema ya tiene un administrador. Endpoint deshabilitado.")
+
+        admin_user = os.getenv("ADMIN_USER")
+        admin_pass = os.getenv("ADMIN_PASS")
+        admin_name = os.getenv("ADMIN_NAME", "Administrador de Sistema")
+
+        if not admin_user or not admin_pass:
+            raise HTTPException(status_code=500, detail="Variables ADMIN_USER y ADMIN_PASS no están configuradas en el servidor.")
+
+        password_hash = pwd_context.hash(admin_pass)
+        secret_2fa = pyotp.random_base32()
+
+        cur.execute("""
+            INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo)
+            VALUES (?, ?, ?, 0, ?, 1)
+        """, (admin_user, password_hash, admin_name, secret_2fa))
+        conn.commit()
+
+        return {
+            "mensaje": "✅ Administrador creado exitosamente",
+            "usuario": admin_user,
+            "nombre": admin_name,
+            "secret_2fa": secret_2fa,
+            "tip": "Abre Google Authenticator → Agregar cuenta → Ingresar clave → pega el secret_2fa"
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+# --- 8. ENDPOINTS DE AUTENTICACIÓN ---
 
 @app.get("/auth/captcha")
 def generar_captcha():
