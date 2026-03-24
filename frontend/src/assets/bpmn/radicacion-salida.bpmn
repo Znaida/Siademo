@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_2"
+                  targetNamespace="http://siade.alcaldia.gov.co/bpmn">
+
+  <bpmn:process id="RadicacionSalida" name="Radicación de Comunicaciones Enviadas" isExecutable="true">
+
+    <bpmn:startEvent id="inicio" name="Dependencia genera documento de salida">
+      <bpmn:outgoing>flujo1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="jefeAprueba" name="Jefe de dependencia aprueba&#10;ANS: 2 días hábiles">
+      <bpmn:incoming>flujo1</bpmn:incoming>
+      <bpmn:outgoing>flujo2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="aprobado" name="¿Aprobado?">
+      <bpmn:incoming>flujo2</bpmn:incoming>
+      <bpmn:outgoing>flujo3si</bpmn:outgoing>
+      <bpmn:outgoing>flujo3no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="corregirDocumento" name="Devolver para correcciones">
+      <bpmn:incoming>flujo3no</bpmn:incoming>
+      <bpmn:outgoing>flujoVolver</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="ventanillaRadica" name="Ventanilla asigna número de radicado de salida">
+      <bpmn:incoming>flujo3si</bpmn:incoming>
+      <bpmn:outgoing>flujo4</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="generarSticker" name="Sistema genera sticker QR de salida">
+      <bpmn:incoming>flujo4</bpmn:incoming>
+      <bpmn:outgoing>flujo5</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="medioEnvio" name="¿Medio de envío?">
+      <bpmn:incoming>flujo5</bpmn:incoming>
+      <bpmn:outgoing>flujo6correo</bpmn:outgoing>
+      <bpmn:outgoing>flujo6fisico</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="enviarCorreo" name="Sistema envía por correo electrónico">
+      <bpmn:incoming>flujo6correo</bpmn:incoming>
+      <bpmn:outgoing>flujo7a</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="enviarFisico" name="Mensajería entrega físicamente">
+      <bpmn:incoming>flujo6fisico</bpmn:incoming>
+      <bpmn:outgoing>flujo7b</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="archivar" name="Sistema archiva copia en Archivo Central">
+      <bpmn:incoming>flujo7a</bpmn:incoming>
+      <bpmn:incoming>flujo7b</bpmn:incoming>
+      <bpmn:outgoing>flujoFin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="fin" name="Fin — Comunicación enviada y archivada">
+      <bpmn:incoming>flujoFin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="flujo1" sourceRef="inicio" targetRef="jefeAprueba"/>
+    <bpmn:sequenceFlow id="flujo2" sourceRef="jefeAprueba" targetRef="aprobado"/>
+    <bpmn:sequenceFlow id="flujo3si" name="Sí" sourceRef="aprobado" targetRef="ventanillaRadica"/>
+    <bpmn:sequenceFlow id="flujo3no" name="No" sourceRef="aprobado" targetRef="corregirDocumento"/>
+    <bpmn:sequenceFlow id="flujoVolver" sourceRef="corregirDocumento" targetRef="jefeAprueba"/>
+    <bpmn:sequenceFlow id="flujo4" sourceRef="ventanillaRadica" targetRef="generarSticker"/>
+    <bpmn:sequenceFlow id="flujo5" sourceRef="generarSticker" targetRef="medioEnvio"/>
+    <bpmn:sequenceFlow id="flujo6correo" name="Correo" sourceRef="medioEnvio" targetRef="enviarCorreo"/>
+    <bpmn:sequenceFlow id="flujo6fisico" name="Físico" sourceRef="medioEnvio" targetRef="enviarFisico"/>
+    <bpmn:sequenceFlow id="flujo7a" sourceRef="enviarCorreo" targetRef="archivar"/>
+    <bpmn:sequenceFlow id="flujo7b" sourceRef="enviarFisico" targetRef="archivar"/>
+    <bpmn:sequenceFlow id="flujoFin" sourceRef="archivar" targetRef="fin"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_2">
+    <bpmndi:BPMNPlane id="BPMNPlane_2" bpmnElement="RadicacionSalida">
+      <bpmndi:BPMNShape id="inicio_di" bpmnElement="inicio"><dc:Bounds x="152" y="82" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="jefeAprueba_di" bpmnElement="jefeAprueba"><dc:Bounds x="240" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="aprobado_di" bpmnElement="aprobado" isMarkerVisible="true"><dc:Bounds x="415" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="corregirDocumento_di" bpmnElement="corregirDocumento"><dc:Bounds x="390" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ventanillaRadica_di" bpmnElement="ventanillaRadica"><dc:Bounds x="520" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="generarSticker_di" bpmnElement="generarSticker"><dc:Bounds x="690" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="medioEnvio_di" bpmnElement="medioEnvio" isMarkerVisible="true"><dc:Bounds x="865" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="enviarCorreo_di" bpmnElement="enviarCorreo"><dc:Bounds x="970" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="enviarFisico_di" bpmnElement="enviarFisico"><dc:Bounds x="970" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archivar_di" bpmnElement="archivar"><dc:Bounds x="1140" y="130" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="fin_di" bpmnElement="fin"><dc:Bounds x="1312" y="152" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flujo1_di" bpmnElement="flujo1"><di:waypoint x="188" y="100"/><di:waypoint x="240" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo2_di" bpmnElement="flujo2"><di:waypoint x="360" y="100"/><di:waypoint x="415" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo3si_di" bpmnElement="flujo3si"><di:waypoint x="465" y="100"/><di:waypoint x="520" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo3no_di" bpmnElement="flujo3no"><di:waypoint x="440" y="125"/><di:waypoint x="440" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujoVolver_di" bpmnElement="flujoVolver"><di:waypoint x="390" y="240"/><di:waypoint x="300" y="240"/><di:waypoint x="300" y="140"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo4_di" bpmnElement="flujo4"><di:waypoint x="640" y="100"/><di:waypoint x="690" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo5_di" bpmnElement="flujo5"><di:waypoint x="810" y="100"/><di:waypoint x="865" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo6correo_di" bpmnElement="flujo6correo"><di:waypoint x="915" y="100"/><di:waypoint x="970" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo6fisico_di" bpmnElement="flujo6fisico"><di:waypoint x="890" y="125"/><di:waypoint x="890" y="240"/><di:waypoint x="970" y="240"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo7a_di" bpmnElement="flujo7a"><di:waypoint x="1090" y="100"/><di:waypoint x="1115" y="100"/><di:waypoint x="1115" y="170"/><di:waypoint x="1140" y="170"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo7b_di" bpmnElement="flujo7b"><di:waypoint x="1090" y="240"/><di:waypoint x="1115" y="240"/><di:waypoint x="1115" y="210"/><di:waypoint x="1140" y="210"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujoFin_di" bpmnElement="flujoFin"><di:waypoint x="1260" y="170"/><di:waypoint x="1312" y="170"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,52 +1,47 @@
 import os
+import secrets
+import string
 from io import BytesIO
-from typing import List
+from typing import List, Optional
 import pandas as pd
 import pyotp
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Depends, Query
+from fastapi.responses import FileResponse, StreamingResponse
 from app.core.config import pwd_context
 from app.core.database import get_db_connection
 from app.core.security import obtener_admin_actual, registrar_evento
-from app.schemas.usuario import UserCreate, UserStatusUpdate
+from app.schemas.usuario import UserCreate, UserCreateAdmin, UserStatusUpdate
 from app.schemas.admin import DependenciaCreate, TRDCreate, EquipoCreate, AsignacionEquipos
+from app.crud.usuario import crear_usuario as crud_crear_usuario, listar_usuarios as crud_listar_usuarios, cambiar_estado_usuario as crud_cambiar_estado
+from app.crud.auditoria import consultar_logs, exportar_logs_csv
 
 router = APIRouter(prefix="/admin")
 
 
 @router.post("/crear-usuario")
-async def crear_usuario(request: Request, data: UserCreate, admin_info: dict = Depends(obtener_admin_actual)):
+async def crear_usuario(request: Request, data: UserCreateAdmin, admin_info: dict = Depends(obtener_admin_actual)):
     if data.rol_id == 0:
         raise HTTPException(status_code=403, detail="No se permite la creación de Super Usuarios adicionales.")
     if data.rol_id == 1 and admin_info['rol'] != 0:
         registrar_evento(admin_info['id'], 'SECURITY_VIOLATION', 'ADMIN', f"Intento fallido de crear Admin por {admin_info['usuario']}", request)
         raise HTTPException(status_code=403, detail="Permisos insuficientes.")
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id FROM usuarios WHERE usuario = ?", (data.usuario,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="El ID de usuario ya está en uso.")
+    alfabeto = string.ascii_letters + string.digits
+    password_temporal = ''.join(secrets.choice(alfabeto) for _ in range(10))
+    hashed_pw = pwd_context.hash(password_temporal)
+    secret_2fa = pyotp.random_base32()
 
-        hashed_pw = pwd_context.hash(data.password)
-        secret_2fa = pyotp.random_base32()
-
-        cur.execute(
-            "INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo) VALUES (?, ?, ?, ?, ?, TRUE)",
-            (data.usuario, hashed_pw, data.nombre_completo, data.rol_id, secret_2fa)
-        )
-        conn.commit()
-        registrar_evento(admin_info['id'], 'CREATE_USER', 'ADMIN', f"Nuevo funcionario: {data.usuario} (Rol: {data.rol_id})", request)
-        return {"status": "success", "message": "Usuario creado correctamente", "secret_2fa": secret_2fa}
-    except Exception as e:
-        conn.rollback()
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-    finally:
-        cur.close()
-        conn.close()
+    crud_crear_usuario(data.usuario, data.nombre_completo, data.rol_id, hashed_pw, secret_2fa)
+    registrar_evento(admin_info['id'], 'CREATE_USER', 'ADMIN',
+                     f"Nuevo funcionario: {data.usuario} (Rol: {data.rol_id})", request)
+    return {
+        "status": "success",
+        "usuario": data.usuario,
+        "message": "Usuario creado. Comparte la contraseña temporal con el funcionario.",
+        "secret_2fa": secret_2fa,
+        "password_temporal": password_temporal,
+        "aviso": "El usuario deberá cambiar su contraseña en el primer inicio de sesión."
+    }
 
 
 @router.post("/crear-equipo")
@@ -108,13 +103,8 @@ async def asignar_equipos(request: Request, data: AsignacionEquipos, admin_info:
 
 @router.post("/cambiar-estado-usuario")
 async def cambiar_estado_usuario(request: Request, data: UserStatusUpdate, admin_info: dict = Depends(obtener_admin_actual)):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE usuarios SET activo = ? WHERE id = ?", (data.nuevo_estado, data.user_id))
-    conn.commit()
+    crud_cambiar_estado(data.user_id, data.nuevo_estado)
     registrar_evento(admin_info['id'], 'USER_STATUS_CHANGE', 'ADMIN', f"ID: {data.user_id}", request)
-    cur.close()
-    conn.close()
     return {"status": "success"}
 
 
@@ -247,17 +237,258 @@ async def listar_trd(admin_info: dict = Depends(obtener_admin_actual)):
 
 @router.get("/listar-usuarios")
 async def listar_usuarios(admin_info: dict = Depends(obtener_admin_actual)):
+    return crud_listar_usuarios()
+
+
+@router.get("/kpi-dashboard")
+async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)):
+    """KPIs para las tarjetas del Panel de Control."""
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, usuario, nombre_completo, rol_id, activo FROM usuarios WHERE rol_id > ?", (admin_info['rol'],))
-    usuarios = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [dict(u) for u in usuarios]
+    try:
+        # --- Volumen de radicación ---
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = DATE('now')")
+        hoy = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = DATE('now', '-1 day')")
+        ayer = cur.fetchone()[0]
+        variacion = round(((hoy - ayer) / ayer * 100), 1) if ayer > 0 else 0
+
+        # --- Cumplimiento ANS ---
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado NOT IN ('Archivado','En Archivo Central')")
+        activos = cur.fetchone()[0]
+        cur.execute("""SELECT COUNT(*) FROM radicados
+                       WHERE estado NOT IN ('Archivado','En Archivo Central')
+                       AND (fecha_vencimiento IS NULL OR fecha_vencimiento >= DATE('now'))""")
+        dentro_plazo = cur.fetchone()[0]
+        pct_ans = round((dentro_plazo / activos * 100), 1) if activos > 0 else 100.0
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_vencimiento = DATE('now')")
+        vencen_hoy = cur.fetchone()[0]
+
+        # --- Eficiencia operativa ---
+        cur.execute("SELECT COUNT(*) FROM radicados")
+        total = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado IN ('Archivado','En Archivo Central')")
+        completados = cur.fetchone()[0]
+        pct_eficiencia = round((completados / total * 100), 1) if total > 0 else 0.0
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado = 'En Trámite'")
+        en_tramite = cur.fetchone()[0]
+
+        # --- Archivo digital ---
+        cur.execute("SELECT COUNT(*) FROM archivo_central")
+        archivados = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM archivo_central WHERE DATE(fecha_transferencia) >= DATE('now','start of month')")
+        archivados_mes = cur.fetchone()[0]
+        pct_archivo_mes = round((archivados_mes / archivados * 100), 1) if archivados > 0 else 0.0
+
+        # --- ANS breakdown (cumplimiento / en riesgo / incumplimiento) ---
+        cur.execute("""SELECT COUNT(*) FROM radicados
+                       WHERE estado NOT IN ('Archivado','En Archivo Central')
+                       AND fecha_vencimiento IS NOT NULL
+                       AND fecha_vencimiento < DATE('now')""")
+        vencidos = cur.fetchone()[0]
+        cur.execute("""SELECT COUNT(*) FROM radicados
+                       WHERE estado NOT IN ('Archivado','En Archivo Central')
+                       AND fecha_vencimiento BETWEEN DATE('now') AND DATE('now','+3 days')""")
+        en_riesgo = cur.fetchone()[0]
+        a_tiempo = max(0, activos - vencidos - en_riesgo)
+        pct_cumplimiento  = round(a_tiempo  / activos * 100, 1) if activos > 0 else 100.0
+        pct_en_riesgo     = round(en_riesgo / activos * 100, 1) if activos > 0 else 0.0
+        pct_incumplimiento = round(vencidos / activos * 100, 1) if activos > 0 else 0.0
+
+        # --- Últimas 5 comunicaciones ---
+        cur.execute("""
+            SELECT r.nro_radicado, r.nombre_razon_social, r.asunto,
+                   r.estado, r.fecha_vencimiento, r.tipo_radicado
+            FROM radicados r
+            ORDER BY r.rowid DESC LIMIT 5
+        """)
+        from datetime import date
+        hoy_date = date.today()
+        ultimas = []
+        for row in cur.fetchall():
+            r = dict(row)
+            fv = r.get('fecha_vencimiento')
+            if fv:
+                try:
+                    fv_date = date.fromisoformat(fv[:10])
+                    diff = (fv_date - hoy_date).days
+                    if r['estado'] in ('Archivado', 'En Archivo Central'):
+                        ans_label, ans_color = 'A tiempo', 'green'
+                    elif diff < 0:
+                        ans_label, ans_color = f'{diff} días', 'red'
+                    elif diff == 0:
+                        ans_label, ans_color = 'Vence hoy', 'red'
+                    elif diff <= 3:
+                        ans_label, ans_color = f'{diff} días', 'yellow'
+                    else:
+                        ans_label, ans_color = 'A tiempo', 'green'
+                except Exception:
+                    ans_label, ans_color = '---', 'gray'
+            else:
+                ans_label, ans_color = 'Sin plazo', 'gray'
+            r['ans_label'] = ans_label
+            r['ans_color'] = ans_color
+            ultimas.append(r)
+
+        return {
+            "volumen":    {"hoy": hoy, "ayer": ayer, "variacion_pct": variacion},
+            "ans":        {"pct": pct_ans, "vencen_hoy": vencen_hoy},
+            "eficiencia": {"pct": pct_eficiencia, "en_tramite": en_tramite},
+            "archivo":    {"total": archivados, "mes": archivados_mes, "pct_mes": pct_archivo_mes},
+            "ans_breakdown": {
+                "cumplimiento":   {"pct": pct_cumplimiento,   "count": a_tiempo},
+                "en_riesgo":      {"pct": pct_en_riesgo,      "count": en_riesgo},
+                "incumplimiento": {"pct": pct_incumplimiento, "count": vencidos}
+            },
+            "ultimas": ultimas
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/stats-graficas")
+async def obtener_stats_graficas(admin_info: dict = Depends(obtener_admin_actual)):
+    """Datos para Chart.js: últimos 7 días por tipo + distribución por estado."""
+    from datetime import date, timedelta
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # --- Barras: últimos 7 días por tipo de radicado ---
+        hoy = date.today()
+        dias = [(hoy - timedelta(days=i)) for i in range(6, -1, -1)]
+        labels_dias = [d.strftime("%d/%m") for d in dias]
+
+        tipos = ["RECIBIDA", "ENVIADA", "INTERNA", "NO-RADICABLE"]
+        series_barras = {}
+        for tipo in tipos:
+            serie = []
+            for d in dias:
+                cur.execute(
+                    "SELECT COUNT(*) FROM radicados WHERE tipo_radicado = ? AND DATE(fecha_radicacion) = ?",
+                    (tipo, d.isoformat())
+                )
+                serie.append(cur.fetchone()[0])
+            series_barras[tipo] = serie
+
+        # --- Dona: distribución actual por estado ---
+        cur.execute("""
+            SELECT estado, COUNT(*) as cnt FROM radicados
+            GROUP BY estado ORDER BY cnt DESC
+        """)
+        estados_rows = cur.fetchall()
+        estados_labels = [r['estado'] for r in estados_rows]
+        estados_values = [r['cnt'] for r in estados_rows]
+
+        return {
+            "barras": {
+                "labels": labels_dias,
+                "series": series_barras
+            },
+            "dona": {
+                "labels": estados_labels,
+                "values": estados_values
+            }
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/stats-informes")
+async def obtener_stats_informes(
+    admin_info: dict = Depends(obtener_admin_actual),
+    fecha_desde: Optional[str] = Query(None),
+    fecha_hasta: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None),
+    dependencia: Optional[str] = Query(None)
+):
+    """Datos para la sección Informes: tendencia mensual, por tipo, por dependencia, ANS."""
+    from datetime import date, timedelta
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Construir WHERE base con filtros
+        condiciones = []
+        params_base = []
+        if fecha_desde:
+            condiciones.append("fecha_radicacion >= ?")
+            params_base.append(fecha_desde)
+        if fecha_hasta:
+            condiciones.append("fecha_radicacion <= ?")
+            params_base.append(fecha_hasta + " 23:59:59")
+        if tipo:
+            condiciones.append("tipo_radicado = ?")
+            params_base.append(tipo)
+        if dependencia:
+            condiciones.append("seccion_responsable LIKE ?")
+            params_base.append(f"%{dependencia}%")
+        where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
+
+        # --- Tendencia mensual: últimos 12 meses ---
+        hoy = date.today()
+        meses = []
+        for i in range(11, -1, -1):
+            d = hoy.replace(day=1)
+            mes_offset = d.month - i
+            anio = d.year + (mes_offset - 1) // 12
+            mes = ((mes_offset - 1) % 12) + 1
+            meses.append(date(anio, mes, 1))
+        tendencia_labels = [m.strftime("%b %Y") for m in meses]
+        tendencia_values = []
+        for m in meses:
+            siguiente = date(m.year + (1 if m.month == 12 else 0), (m.month % 12) + 1, 1)
+            cur.execute(
+                f"SELECT COUNT(*) FROM radicados {where} {'AND' if where else 'WHERE'} fecha_radicacion >= ? AND fecha_radicacion < ?",
+                params_base + [m.isoformat(), siguiente.isoformat()]
+            )
+            tendencia_values.append(cur.fetchone()[0])
+
+        # --- Por tipo ---
+        cur.execute(f"SELECT tipo_radicado, COUNT(*) as cnt FROM radicados {where} GROUP BY tipo_radicado ORDER BY cnt DESC", params_base)
+        tipo_rows = cur.fetchall()
+
+        # --- Por dependencia (top 8) ---
+        cur.execute(f"""SELECT COALESCE(NULLIF(seccion_responsable,''), 'Sin asignar') as dep,
+                        COUNT(*) as cnt FROM radicados {where}
+                        GROUP BY dep ORDER BY cnt DESC LIMIT 8""", params_base)
+        dep_rows = cur.fetchall()
+
+        # --- ANS por dependencia ---
+        cur.execute(f"""SELECT COALESCE(NULLIF(seccion_responsable,''), 'Sin asignar') as dep,
+                        COUNT(*) as total,
+                        SUM(CASE WHEN (fecha_vencimiento IS NULL OR fecha_vencimiento >= DATE('now'))
+                                 OR estado IN ('Archivado','En Archivo Central') THEN 1 ELSE 0 END) as a_tiempo
+                        FROM radicados {where}
+                        GROUP BY dep ORDER BY total DESC LIMIT 8""", params_base)
+        ans_dep_rows = cur.fetchall()
+        ans_dep_labels = [r['dep'] for r in ans_dep_rows]
+        ans_dep_pct = [
+            round(r['a_tiempo'] / r['total'] * 100, 1) if r['total'] > 0 else 100.0
+            for r in ans_dep_rows
+        ]
+
+        # --- Tabla resumen para exportar (máx 500 registros) ---
+        cur.execute(f"""SELECT nro_radicado, tipo_radicado, nombre_razon_social, asunto,
+                        serie, seccion_responsable, estado, fecha_radicacion, fecha_vencimiento
+                        FROM radicados {where} ORDER BY fecha_radicacion DESC LIMIT 500""", params_base)
+        resumen = [dict(r) for r in cur.fetchall()]
+
+        return {
+            "tendencia": {"labels": tendencia_labels, "values": tendencia_values},
+            "por_tipo": {"labels": [r['tipo_radicado'] for r in tipo_rows], "values": [r['cnt'] for r in tipo_rows]},
+            "por_dependencia": {"labels": [r['dep'] for r in dep_rows], "values": [r['cnt'] for r in dep_rows]},
+            "ans_dependencia": {"labels": ans_dep_labels, "values": ans_dep_pct},
+            "resumen": resumen
+        }
+    finally:
+        cur.close()
+        conn.close()
 
 
 @router.get("/eventos-recientes")
 async def obtener_eventos_recientes(admin_info: dict = Depends(obtener_admin_actual)):
+    """Últimos 15 eventos para el dashboard — acceso rápido sin filtros."""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -269,3 +500,47 @@ async def obtener_eventos_recientes(admin_info: dict = Depends(obtener_admin_act
     cur.close()
     conn.close()
     return [dict(e) for e in eventos]
+
+
+@router.get("/audit-logs")
+async def obtener_audit_logs(
+    admin_info: dict = Depends(obtener_admin_actual),
+    usuario: Optional[str] = Query(None, description="Filtrar por nombre de usuario"),
+    fecha_desde: Optional[str] = Query(None, description="Fecha inicio YYYY-MM-DD"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha fin YYYY-MM-DD"),
+    modulo: Optional[str] = Query(None, description="AUTH | ADMIN | VENTANILLA | ARCHIVO | NOTIFICACIONES"),
+    accion: Optional[str] = Query(None, description="Texto parcial de la acción"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200)
+):
+    """
+    Logs de auditoría con filtros y paginación.
+    Solo accesible para administradores.
+    Los registros son inmutables — solo lectura.
+    """
+    return consultar_logs(usuario, fecha_desde, fecha_hasta, modulo, accion, page, per_page)
+
+
+@router.get("/audit-logs/export")
+async def exportar_audit_logs(
+    admin_info: dict = Depends(obtener_admin_actual),
+    usuario: Optional[str] = Query(None),
+    fecha_desde: Optional[str] = Query(None),
+    fecha_hasta: Optional[str] = Query(None),
+    modulo: Optional[str] = Query(None),
+    accion: Optional[str] = Query(None)
+):
+    """
+    Exporta logs de auditoría a CSV.
+    El archivo incluye todos los registros que coincidan con los filtros.
+    """
+    from datetime import datetime
+    csv_content = exportar_logs_csv(usuario, fecha_desde, fecha_hasta, modulo, accion)
+    fecha_export = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"auditoria_siade_{fecha_export}.csv"
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

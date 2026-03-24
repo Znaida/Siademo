@@ -65,9 +65,16 @@
       <div class="section-2fa animate-in zoom-in duration-300" *ngIf="paso2">
         <div class="input-group">
           <label>Token de Seguridad (TOTP)</label>
-          <input type="text" name="codigo2fa" [(ngModel)]="loginData.codigo2fa" 
-                 placeholder="000 000" maxlength="6" 
+          <input type="text" name="codigo2fa" [(ngModel)]="loginData.codigo2fa"
+                 placeholder="000 000" maxlength="6"
                  style="text-align: center; letter-spacing: 0.5em; font-size: 1.5rem; font-family: monospace;" required>
+        </div>
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.75rem 1rem; margin-top: 0.75rem; display: flex; gap: 0.6rem; align-items: flex-start;">
+          <span style="font-size: 1rem;">💡</span>
+          <p style="margin: 0; font-size: 0.72rem; color: #0369a1; font-weight: 600; line-height: 1.5;">
+            El código cambia cada 30 segundos. Si le queda poco tiempo al código actual en tu app,
+            <strong>espera el siguiente</strong> antes de ingresar para evitar errores de validación.
+          </p>
         </div>
       </div>
 

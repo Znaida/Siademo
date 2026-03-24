@@ -1,8 +1,10 @@
 from typing import Optional
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, field_validator
 
 
-class RadicadoMetadata(BaseModel):
+# ─── Entrada: crear radicado ───────────────────────────────────────────────
+class RadicadoCreate(BaseModel):
     tipo_radicado: str
     tipo_remitente: str
     primer_apellido: Optional[str] = None
@@ -35,7 +37,61 @@ class RadicadoMetadata(BaseModel):
     nro_radicado_relacionado: Optional[str] = None
     activa_flujo_id: Optional[int] = None
 
+    @field_validator("nro_folios")
+    @classmethod
+    def folios_positivos(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("nro_folios debe ser al menos 1")
+        return v
 
+    @field_validator("dias_respuesta")
+    @classmethod
+    def dias_positivos(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("dias_respuesta no puede ser negativo")
+        return v
+
+
+# Alias para compatibilidad con código existente
+RadicadoMetadata = RadicadoCreate
+
+
+# ─── Respuesta: lo que devuelve la API ────────────────────────────────────
+class RadicadoResponse(BaseModel):
+    id: int
+    nro_radicado: str
+    fecha_radicacion: str
+    tipo_radicado: str
+    asunto: str
+    estado: str
+    nombre_razon_social: str
+    tipo_remitente: str
+    serie: str
+    subserie: str
+    seccion_responsable: str
+    metodo_recepcion: str
+    nro_folios: int
+    dias_respuesta: int
+    funcionario_responsable_id: Optional[int] = None
+    nro_radicado_relacionado: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Trazabilidad ─────────────────────────────────────────────────────────
+class TrazabilidadResponse(BaseModel):
+    id: int
+    nro_radicado: str
+    accion: str
+    descripcion: Optional[str] = None
+    usuario: Optional[str] = None
+    fecha: str
+    ip: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Operaciones sobre radicados ──────────────────────────────────────────
 class TrasladoData(BaseModel):
     nuevo_responsable_id: int
     comentario: str = ""

@@ -9,7 +9,8 @@ on:
       - '.github/workflows/azure-backend-deploy.yml'
 
 jobs:
-  deploy:
+  test:
+    name: Tests y cobertura
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,7 +21,32 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Instalar dependencias
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Correr pytest con cobertura
+        run: |
+          cd backend
+          pytest
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'ci_test_secret_key_siade_2026' }}
+
+  deploy:
+    name: Deploy a Azure App Service
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
         run: |
           cd backend
           pip install -r requirements.txt

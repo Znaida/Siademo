@@ -1,12 +1,19 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { FlujosBpmnComponent } from '../flujos/flujos';
+import BpmnViewer from 'bpmn-js';
 import { Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { jwtDecode } from 'jwt-decode';
 import { interval, Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
+import { Chart, registerables } from 'chart.js';
+import * as XLSX from 'xlsx';
 import { environment } from '../../../environments/environment';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
@@ -14,7 +21,7 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./dashboard.scss'],
   standalone: false
 })
-export class Dashboard implements OnInit, OnDestroy {
+export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
   // --- ESTADO DEL USUARIO ---
   userRole: number = 0;
   userId: number = 0;
@@ -68,6 +75,11 @@ export class Dashboard implements OnInit, OnDestroy {
 
   fechaActualRadicado: string = ''; // Fecha y hora automática
   nroRadicadoSimulado: string = '00123'; // Para el preview
+  qrPreviewUrl: string = ''; // URL del QR en tiempo real
+
+  // --- VALIDACIÓN DE FORMULARIO DE RADICACIÓN ---
+  formSubmitted: boolean = false;
+  erroresForm: {[key: string]: string} = {};
 
   // --- VARIABLES PARA ADJUNTOS ---
 nombreArchivoPrincipal: string = '';
@@ -121,8 +133,16 @@ anexosBinarios: File[] = [];
         this.buscarArchivoCentral();
         break;
 
+      case 'Flujos de Trabajo':
+        this.seccionActiva = 'flujos';
+        break;
+
+      case 'Informes':
+        this.seccionActiva = 'informes';
+        this.cargarInformes();
+        break;
+
       default:
-        // Manejo para secciones en desarrollo (Informes, Archivo Central, etc.)
         alert(`La sección de ${label} está en desarrollo.`);
         break;
     }
@@ -218,6 +238,7 @@ anexosBinarios: File[] = [];
   listaRadicados: any[] = [];
   busquedaRadicados: string = '';
   filtrosGestion = { tipo: '', estado: '', serie: '', vencido: '' };
+  paginacionRadicados = { page: 1, per_page: 50, total: 0, total_pages: 1 };
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
@@ -226,10 +247,76 @@ anexosBinarios: File[] = [];
   transferenciaData = { caja: '', carpeta: '', folio_inicio: null as number|null, folio_fin: null as number|null, llaves_busqueda: '', observaciones: '' };
   usuariosActivos: any[] = [];
   notificaciones: any[] = [];
+  // --- KPIs DASHBOARD ---
+  kpi: any = {
+    volumen:       { hoy: 0, ayer: 0, variacion_pct: 0 },
+    ans:           { pct: 0, vencen_hoy: 0 },
+    eficiencia:    { pct: 0, en_tramite: 0 },
+    archivo:       { total: 0, mes: 0, pct_mes: 0 },
+    ans_breakdown: {
+      cumplimiento:   { pct: 0, count: 0 },
+      en_riesgo:      { pct: 0, count: 0 },
+      incumplimiento: { pct: 0, count: 0 }
+    },
+    ultimas: []
+  };
+  mesActual: string = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
   // --- MODALES FLUJO ---
+  // --- AUDITORÍA ---
+  listaAuditLogs: any[] = [];
+  filtrosAudit = { usuario: '', modulo: '', fecha_desde: '', fecha_hasta: '' };
+  auditPaginacion = { page: 1, per_page: 50, total: 0, total_pages: 1 };
   mostrarModalTraslado: boolean = false;
   mostrarModalHistorial: boolean = false;
+  mostrarModalFlujo: boolean = false;
+  cargandoFlujo: boolean = false;
+  radicadoFlujoActual: any = null;
+  flujoTieneInstancia: boolean = false;
+  pasoActualFlujo: string = '';
+  private bpmnModalViewer: any = null;
+
+  // --- FACTURAS DIAN (T4.5.1 / T4.5.2) ---
+  facturasDianLista: any[] = [];
+  busquedaFacturasDian: string = '';
+  mostrarModalPreviewDian: boolean = false;
+  mostrarModalDetalleDian: boolean = false;
+  previewDianData: any = null;
+  facturaDianDetalle: any = null;
+  archivoDianSeleccionado: File | null = null;
+  cargandoRadicacionDian: boolean = false;
+
+  // --- PDF SPLITTING (T4.4.3) ---
+  mostrarModalDividirPdf: boolean = false;
+  infoPdf: any = null;
+  cargandoInfoPdf: boolean = false;
+  radicadoPdfActual: any = null;
+  pdfPaginaInicio: number = 1;
+  pdfPaginaFin: number = 1;
+
+  @ViewChild('bpmnModalContainer') bpmnModalContainer: any;
+  @ViewChild('chartBarras') chartBarrasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('chartDona') chartDonaRef!: ElementRef<HTMLCanvasElement>;
+  private chartBarras: Chart | null = null;
+  private chartDona: Chart | null = null;
+  graficasListas: boolean = false;
+
+  // --- INFORMES ---
+  @ViewChild('chartLinea') chartLineaRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('chartTipo') chartTipoRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('chartAnsDep') chartAnsDepRef!: ElementRef<HTMLCanvasElement>;
+  private chartLinea: Chart | null = null;
+  private chartTipoPie: Chart | null = null;
+  private chartAnsDep: Chart | null = null;
+  informesListas: boolean = false;
+  informesCargando: boolean = false;
+  filtrosInformes = { fecha_desde: '', fecha_hasta: '', tipo: '', dependencia: '' };
+  informesResumen: any[] = [];
+  informesPeriodo: string = '';
   cargandoHistorial: boolean = false;
+  mostrarModalCambioPassword: boolean = false;
+  esCambioForzado: boolean = false;
+  formCambioPassword = { password_actual: '', password_nuevo: '', password_confirmar: '' };
+  errorCambioPassword: string = '';
   radicadoSeleccionado: any = null;
   historialActual: any[] = [];
   trasladoNuevoResponsableId: number | null = null;
@@ -245,16 +332,22 @@ anexosBinarios: File[] = [];
   nuevoUser = {
     nombre: '',
     usuario: '',
-    password: '',
-    rol_id: 3 
+    rol_id: 3
   };
 
   private apiUrl = environment.apiUrl;
 
+  // --- VISOR PDF ---
+  mostrarModalPdf: boolean = false;
+  pdfUrlSegura: SafeResourceUrl | null = null;
+  pdfNroRadicado: string = '';
+  private _pdfBlobUrl: string = '';
+
   constructor(
-    private router: Router, 
+    private router: Router,
     private http: HttpClient,
-    private cd: ChangeDetectorRef 
+    private cd: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit() {
@@ -279,16 +372,31 @@ anexosBinarios: File[] = [];
           second: '2-digit'
         });
 
+        // Generar QR de previsualización inicial
+        this.actualizarQRPreview();
+
         // Carga inicial de datos persistentes
         this.cargarEstructura();
         this.cargarTRD();
         this.cargarListaGrupos();
         this.cargarUsuariosActivos();
         this.cargarNotificaciones();
+        this.cargarKpis();
+        this.cargarGraficas();
 
         if (this.userRole <= 1) {
           this.iniciarMonitoreo();
         }
+
+        // Verificar si el usuario debe cambiar su contraseña
+        if (localStorage.getItem('debe_cambiar_password') === '1') {
+          this.esCambioForzado = true;
+          this.formCambioPassword = { password_actual: '', password_nuevo: '', password_confirmar: '' };
+          this.errorCambioPassword = '';
+          this.mostrarModalCambioPassword = true;
+          this.cd.detectChanges();
+        }
+
       } catch (error) {
         this.cerrarSesion();
       }
@@ -298,11 +406,7 @@ anexosBinarios: File[] = [];
   }
 
   
-  // --- SEGURIDAD: HELPER PARA HEADERS JWT ---
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
-    return new HttpHeaders().set('Authorization', `Bearer ${token}`);
-  }
+  // Headers manejados automáticamente por AuthInterceptor (T5.1.2)
 
   // --- LÓGICA DE NAVEGACIÓN Y PERMISOS ---
 
@@ -328,7 +432,7 @@ anexosBinarios: File[] = [];
   // --- GESTIÓN DE ESTRUCTURA ORGÁNICA (VÍNCULO CON FASTAPI) ---
 
   cargarEstructura() {
-    this.http.get<any[]>(`${this.apiUrl}/admin/listar-estructura`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/listar-estructura`)
       .subscribe({
         next: (res) => {
           this.unidadesOrganicas = res;
@@ -355,7 +459,7 @@ anexosBinarios: File[] = [];
 
     console.log("%c--- ENVIANDO ESTRUCTURA A SQL ---", "color: #2563eb; font-weight: bold;");
     
-    this.http.post(`${this.apiUrl}/admin/registrar-dependencia`, payload, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}/admin/registrar-dependencia`, payload)
       .subscribe({
         next: (res: any) => {
           alert("✅ Estructura vinculada y guardada en PostgreSQL.");
@@ -379,18 +483,24 @@ anexosBinarios: File[] = [];
     }
   }
 
-  ejecutarRadicacion() {
-    // 1. Validación de campos obligatorios
-    if (!this.radicado.nombreRemitente || !this.radicado.asunto) {
-      alert("⚠️ Error: El nombre del remitente/destinatario y el asunto son obligatorios.");
-      return;
-    }
+  validarFormulario(): boolean {
+    this.erroresForm = {};
+    if (!this.radicado.nombreRemitente?.trim())
+      this.erroresForm['nombreRemitente'] = 'Campo requerido';
+    if (!this.radicado.asunto?.trim())
+      this.erroresForm['asunto'] = 'Campo requerido';
+    if (!this.radicado.serie)
+      this.erroresForm['serie'] = 'Seleccione una serie';
+    if (!this.archivoBinarioPrincipal)
+      this.erroresForm['archivoPrincipal'] = 'Debe adjuntar el documento principal';
+    if (this.radicado.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.radicado.correo))
+      this.erroresForm['correo'] = 'Correo electrónico no válido';
+    return Object.keys(this.erroresForm).length === 0;
+  }
 
-    // 2. Validación de archivo principal (Requisito técnico para SIADE)
-    if (!this.archivoBinarioPrincipal) {
-      alert("⚠️ Error: Debe adjuntar el documento digitalizado principal.");
-      return;
-    }
+  ejecutarRadicacion() {
+    this.formSubmitted = true;
+    if (!this.validarFormulario()) return;
 
     console.log("%c--- INICIANDO PROCESO DE RADICACIÓN OFICIAL ---", "color: #2563eb; font-weight: bold;");
 
@@ -432,7 +542,7 @@ anexosBinarios: File[] = [];
     // 4. Preparación del paquete de envío (FormData para archivos + JSON)
     const formData = new FormData();
     formData.append('metadata', JSON.stringify(metadata)); // La metadata viaja como string JSON
-    formData.append('archivo_principal', this.archivoBinarioPrincipal);
+    formData.append('archivo_principal', this.archivoBinarioPrincipal!);
     
     // Agregar múltiples anexos si existen
     if (this.anexosBinarios.length > 0) {
@@ -442,7 +552,7 @@ anexosBinarios: File[] = [];
     }
 
     // 5. Envío al Backend (FastAPI)
-    this.http.post<any>(`${this.apiUrl}/radicar`, formData, { headers: this.getAuthHeaders() })
+    this.http.post<any>(`${this.apiUrl}/radicar`, formData)
       .subscribe({
         next: (res) => {
           this.nroRadicadoSimulado = res.numero;
@@ -493,8 +603,9 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
 
     const qrData = `SIADE|${nroRadicado}|${new Date().toISOString()}`;
     const qrDataUrl: string = await QRCode.toDataURL(qrData, { width: 200, margin: 1 });
+    const barcodeDataUrl: string = this.generarBarcodeCanvas(nroRadicado, 320, 56);
 
-    const doc = new jsPDF({ unit: 'mm', format: [80, 100] });
+    const doc = new jsPDF({ unit: 'mm', format: [80, 110] });
 
     // Fondo header
     doc.setFillColor(15, 23, 42);
@@ -517,9 +628,12 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
     // QR
     doc.addImage(qrDataUrl, 'PNG', 22, 31, 36, 36);
 
+    // Código de barras Code 128
+    doc.addImage(barcodeDataUrl, 'PNG', 5, 69, 70, 12);
+
     // Línea separadora
     doc.setDrawColor(226, 232, 240);
-    doc.line(5, 70, 75, 70);
+    doc.line(5, 83, 75, 83);
 
     // Datos
     doc.setTextColor(30, 41, 59);
@@ -528,28 +642,28 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
 
     const isInterna = this.tabActivaVentanilla === 'internas';
     if (isInterna) {
-      doc.text('Remite:', 5, 76);
+      doc.text('Remite:', 5, 89);
       doc.setFont('helvetica', 'normal');
-      doc.text(this.radicado.funcionarioOrigen || '---', 25, 76);
+      doc.text(this.radicado.funcionarioOrigen || '---', 25, 89);
       doc.setFont('helvetica', 'bold');
-      doc.text('Destino:', 5, 82);
+      doc.text('Destino:', 5, 95);
       doc.setFont('helvetica', 'normal');
-      doc.text(this.radicado.funcionarioResponsable || '---', 25, 82);
+      doc.text(this.radicado.funcionarioResponsable || '---', 25, 95);
     } else {
       const personLabel = this.tabActivaVentanilla === 'enviadas' ? 'Destinatario:' : 'Remitente:';
-      doc.text(personLabel, 5, 76);
+      doc.text(personLabel, 5, 89);
       doc.setFont('helvetica', 'normal');
-      doc.text(this.radicado.nombreRemitente || '---', 30, 76);
+      doc.text(this.radicado.nombreRemitente || '---', 30, 89);
       doc.setFont('helvetica', 'bold');
-      doc.text('Vencimiento:', 5, 82);
+      doc.text('Vencimiento:', 5, 95);
       doc.setFont('helvetica', 'normal');
-      doc.text(vencimiento, 30, 82);
+      doc.text(vencimiento, 30, 95);
     }
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Fecha:', 5, 88);
+    doc.text('Fecha:', 5, 101);
     doc.setFont('helvetica', 'normal');
-    doc.text(this.fechaActualRadicado, 25, 88);
+    doc.text(this.fechaActualRadicado, 25, 101);
 
     doc.save(`sticker_${nroRadicado}.pdf`);
   }
@@ -597,14 +711,18 @@ limpiarFormularioRadicacion() {
   this.nombreArchivoAnexo = '';
   this.archivoBinarioPrincipal = null;
   this.anexosBinarios = [];
-  
+
+  // Resetear validación
+  this.formSubmitted = false;
+  this.erroresForm = {};
+
   this.cd.detectChanges();
 }
 
   // --- GESTIÓN DE TRD (VÍNCULO CON FASTAPI Y JSONB) ---
 
   cargarTRD() {
-    this.http.get<any[]>(`${this.apiUrl}/admin/listar-trd`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/listar-trd`)
       .subscribe({
         next: (res) => {
           this.listaTRD = res;
@@ -637,7 +755,7 @@ limpiarFormularioRadicacion() {
 
     console.log("%c--- ENVIANDO TRD A BACKEND ---", "color: #7c3aed; font-weight: bold;");
 
-    this.http.post(`${this.apiUrl}/admin/registrar-trd`, payloadTRD, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}/admin/registrar-trd`, payloadTRD)
       .subscribe({
         next: (res: any) => {
           alert("✅ Serie documental indexada en la TRD exitosamente.");
@@ -680,7 +798,7 @@ limpiarFormularioRadicacion() {
     }
 
     const payload = { nombre: nombreLimpio };
-    this.http.post(`${this.apiUrl}/admin/crear-equipo`, payload, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}/admin/crear-equipo`, payload)
       .subscribe({
         next: () => {
           this.pasoCreacionGrupo = 2; // <--- CAMBIAMOS AL PASO DE ÉXITO
@@ -695,7 +813,7 @@ limpiarFormularioRadicacion() {
     this.usuarioSeleccionado = user;
     console.log(`%c--- CARGANDO GRUPOS PARA: ${user.nombre_completo} ---`, "color: #7c3aed; font-weight: bold;");
 
-    this.http.get<any[]>(`${this.apiUrl}/admin/listar-equipos`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/listar-equipos`)
       .subscribe({
         next: (res) => {
           this.listaEquipos = res.map(g => ({ ...g, seleccionado: false }));
@@ -714,7 +832,7 @@ limpiarFormularioRadicacion() {
       equipos_ids: seleccionados
     };
 
-    this.http.post(`${this.apiUrl}/admin/asignar-equipos-usuario`, payload, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}/admin/asignar-equipos-usuario`, payload)
       .subscribe({
         next: () => {
           alert(`✅ Grupos vinculados a ${this.usuarioSeleccionado.nombre_completo}`);
@@ -725,28 +843,137 @@ limpiarFormularioRadicacion() {
   }
 
   cargarListaGrupos() {
-    this.http.get<any[]>(`${this.apiUrl}/admin/listar-equipos`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/listar-equipos`)
       .subscribe(res => this.listaEquipos = res);
   }
 
-  cargarRadicados() {
-    this.http.get<any[]>(`${this.apiUrl}/radicados`, { headers: this.getAuthHeaders() })
+  cargarKpis() {
+    this.http.get<any>(`${this.apiUrl}/admin/kpi-dashboard`).subscribe({
+      next: (res) => { this.kpi = res; this.cd.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  ngAfterViewInit() {
+    // Las gráficas se crean cuando lleguen los datos
+  }
+
+  cargarGraficas() {
+    this.http.get<any>(`${this.apiUrl}/admin/stats-graficas`).subscribe({
+      next: (res) => {
+        this.graficasListas = true;
+        this.cd.detectChanges();
+        // Esperar un tick para que el DOM renderice los canvas
+        setTimeout(() => { this._inicializarGraficas(res); }, 50);
+      },
+      error: () => {}
+    });
+  }
+
+  private _inicializarGraficas(data: any) {
+    // --- Gráfica de barras: últimos 7 días por tipo ---
+    if (this.chartBarrasRef?.nativeElement) {
+      if (this.chartBarras) { this.chartBarras.destroy(); }
+      const colores: Record<string, string> = {
+        'RECIBIDA':     '#3b82f6',
+        'ENVIADA':      '#10b981',
+        'INTERNA':      '#8b5cf6',
+        'NO-RADICABLE': '#f59e0b'
+      };
+      const datasets = Object.entries(data.barras.series).map(([tipo, valores]) => ({
+        label: tipo,
+        data: valores as number[],
+        backgroundColor: colores[tipo] || '#64748b',
+        borderRadius: 4,
+        borderSkipped: false as const
+      }));
+      this.chartBarras = new Chart(this.chartBarrasRef.nativeElement, {
+        type: 'bar',
+        data: { labels: data.barras.labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            title: { display: false }
+          },
+          scales: {
+            x: { stacked: false, grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          }
+        }
+      });
+    }
+
+    // --- Gráfica de dona: distribución por estado ---
+    if (this.chartDonaRef?.nativeElement) {
+      if (this.chartDona) { this.chartDona.destroy(); }
+      const paleta = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
+      this.chartDona = new Chart(this.chartDonaRef.nativeElement, {
+        type: 'doughnut',
+        data: {
+          labels: data.dona.labels,
+          datasets: [{
+            data: data.dona.values,
+            backgroundColor: paleta.slice(0, data.dona.labels.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          cutout: '65%'
+        }
+      });
+    }
+  }
+
+  cargarRadicados(page: number = this.paginacionRadicados.page) {
+    const p: any = { page, per_page: this.paginacionRadicados.per_page };
+    if (this.busquedaRadicados.trim())        p['q']            = this.busquedaRadicados.trim();
+    if (this.filtrosGestion.tipo)             p['tipo_doc']     = this.filtrosGestion.tipo;
+    if (this.filtrosGestion.estado)           p['estado']       = this.filtrosGestion.estado;
+    if (this.filtrosGestion.serie)            p['serie_filtro'] = this.filtrosGestion.serie;
+    if (this.filtrosGestion.vencido)          p['vencido']      = this.filtrosGestion.vencido;
+
+    this.http.get<any>(`${this.apiUrl}/radicados`, { params: p })
       .subscribe({
         next: (res) => {
-          this.listaRadicados = res;
+          this.listaRadicados = res.items ?? res;
+          this.paginacionRadicados = {
+            page:        res.page       ?? 1,
+            per_page:    res.per_page   ?? 50,
+            total:       res.total      ?? res.length ?? 0,
+            total_pages: res.total_pages ?? 1
+          };
           setTimeout(() => this.cd.detectChanges(), 0);
         },
         error: (err) => Swal.fire('Error', err.error?.detail || 'No se pudieron cargar los radicados.', 'error')
       });
   }
 
+  cambiarPaginaRadicados(page: number) {
+    if (page < 1 || page > this.paginacionRadicados.total_pages) return;
+    this.paginacionRadicados.page = page;
+    this.cargarRadicados(page);
+  }
+
+  aplicarFiltrosRadicados() {
+    this.paginacionRadicados.page = 1;
+    this.cargarRadicados(1);
+  }
+
   cargarUsuariosActivos() {
-    this.http.get<any[]>(`${this.apiUrl}/usuarios-activos`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/usuarios-activos`)
       .subscribe({ next: (res) => { this.usuariosActivos = res; } });
   }
 
   cargarNotificaciones() {
-    this.http.get<any[]>(`${this.apiUrl}/mis-notificaciones`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/mis-notificaciones`)
       .subscribe({ next: (res) => { this.notificaciones = res; this.cd.detectChanges(); } });
   }
 
@@ -755,7 +982,7 @@ limpiarFormularioRadicacion() {
   }
 
   marcarLeida(id: number) {
-    this.http.post(`${this.apiUrl}/mis-notificaciones/${id}/leer`, {}, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}/mis-notificaciones/${id}/leer`, {})
       .subscribe({ next: () => {
         const n = this.notificaciones.find(n => n.id === id);
         if (n) { n.leida = 1; this.cd.detectChanges(); }
@@ -776,7 +1003,7 @@ limpiarFormularioRadicacion() {
     }
     this.http.post(`${this.apiUrl}/radicados/${encodeURIComponent(this.radicadoSeleccionado.nro_radicado)}/trasladar`,
       { nuevo_responsable_id: this.trasladoNuevoResponsableId, comentario: this.trasladoComentario },
-      { headers: this.getAuthHeaders() }
+      
     ).subscribe({
       next: (res: any) => {
         this.mostrarModalTraslado = false;
@@ -793,11 +1020,115 @@ limpiarFormularioRadicacion() {
     this.cargandoHistorial = true;
     this.mostrarModalHistorial = true;
     this.http.get<any[]>(`${this.apiUrl}/radicados/${encodeURIComponent(radicado.nro_radicado)}/historial`,
-      { headers: this.getAuthHeaders() }
+      
     ).subscribe({
       next: (res) => { this.historialActual = res; this.cargandoHistorial = false; this.cd.detectChanges(); },
       error: () => { this.cargandoHistorial = false; this.cd.detectChanges(); Swal.fire('Error', 'No se pudo cargar el historial.', 'error'); }
     });
+  }
+
+  async abrirFlujo(radicado: any) {
+    this.radicadoFlujoActual = radicado;
+    this.mostrarModalFlujo = true;
+    this.cargandoFlujo = true;
+    this.cd.detectChanges();
+
+    // Obtener info del flujo desde el backend
+    this.http.get<any>(
+      `${this.apiUrl}/radicados/${encodeURIComponent(radicado.nro_radicado)}/flujo`,
+      
+    ).subscribe({
+      next: async (flujoData) => {
+        this.radicadoFlujoActual = { ...radicado, ...flujoData };
+        this.flujoTieneInstancia = flujoData.tiene_instancia_real;
+        this.pasoActualFlujo = flujoData.paso_actual;
+        this.cd.detectChanges();
+        await this.renderizarBpmnModal(flujoData);
+      },
+      error: () => {
+        this.cargandoFlujo = false;
+        this.cd.detectChanges();
+        Swal.fire('Error', 'No se pudo cargar el flujo de trabajo.', 'error');
+      }
+    });
+  }
+
+  iniciarFlujoWorkflow() {
+    if (!this.radicadoFlujoActual) return;
+    const formData = new FormData();
+    formData.append('nro_radicado', this.radicadoFlujoActual.nro_radicado);
+    this.http.post<any>(`${this.apiUrl}/workflows/start`, formData)
+      .subscribe({
+        next: (res) => {
+          this.flujoTieneInstancia = true;
+          this.pasoActualFlujo = res.paso_actual;
+          this.abrirFlujo(this.radicadoFlujoActual);
+        },
+        error: () => Swal.fire('Error', 'No se pudo iniciar el flujo.', 'error')
+      });
+  }
+
+  avanzarPasoFlujo() {
+    if (!this.radicadoFlujoActual) return;
+    const nro = encodeURIComponent(this.radicadoFlujoActual.nro_radicado);
+    this.http.post<any>(`${this.apiUrl}/workflows/${nro}/complete-task`, {})
+      .subscribe({
+        next: (res) => {
+          this.pasoActualFlujo = res.paso_actual;
+          this.radicadoFlujoActual.estado = res.estado_radicado;
+          this.abrirFlujo(this.radicadoFlujoActual);
+        },
+        error: () => Swal.fire('Error', 'No se pudo avanzar el paso.', 'error')
+      });
+  }
+
+  async renderizarBpmnModal(flujoData: any) {
+    await new Promise(r => setTimeout(r, 100)); // esperar que el DOM esté listo
+
+    if (this.bpmnModalViewer) {
+      this.bpmnModalViewer.destroy();
+    }
+
+    const container = this.bpmnModalContainer?.nativeElement;
+    if (!container) { this.cargandoFlujo = false; this.cd.detectChanges(); return; }
+
+    this.bpmnModalViewer = new BpmnViewer({ container });
+
+    try {
+      const response = await fetch(`/bpmn/${flujoData.archivo_bpmn}`);
+      const xml = await response.text();
+      await this.bpmnModalViewer.importXML(xml);
+
+      const canvas = this.bpmnModalViewer.get('canvas');
+      canvas.zoom('fit-viewport', 'auto');
+
+      // Colorear pasos completados (verde)
+      for (const paso of flujoData.pasos_completados || []) {
+        try { canvas.addMarker(paso, 'flujo-completado'); } catch {}
+      }
+      // Colorear paso actual (azul)
+      try { canvas.addMarker(flujoData.paso_actual, 'flujo-actual'); } catch {}
+
+    } catch (e) {
+      console.error('Error renderizando BPMN:', e);
+    } finally {
+      this.cargandoFlujo = false;
+      this.cd.detectChanges();
+    }
+  }
+
+  ajustarVistaFlujo() {
+    if (this.bpmnModalViewer) {
+      this.bpmnModalViewer.get('canvas').zoom('fit-viewport', 'auto');
+    }
+  }
+
+  cerrarModalFlujo() {
+    this.mostrarModalFlujo = false;
+    if (this.bpmnModalViewer) {
+      this.bpmnModalViewer.destroy();
+      this.bpmnModalViewer = null;
+    }
   }
 
   ejecutarArchivar(radicado: any) {
@@ -814,7 +1145,7 @@ limpiarFormularioRadicacion() {
       if (result.isConfirmed) {
         this.http.post(`${this.apiUrl}/radicados/${encodeURIComponent(radicado.nro_radicado)}/archivar`,
           { comentario: result.value || 'Archivado.' },
-          { headers: this.getAuthHeaders() }
+          
         ).subscribe({
           next: () => { Swal.fire('Archivado', 'El radicado fue finalizado.', 'success'); this.cargarRadicados(); },
           error: (err) => Swal.fire('Error', err.error?.detail || 'No se pudo archivar.', 'error')
@@ -831,7 +1162,7 @@ limpiarFormularioRadicacion() {
     if (serie) params['serie'] = serie;
     if (caja) params['caja'] = caja;
     if (disposicion) params['disposicion'] = disposicion;
-    this.http.get<any[]>(`${this.apiUrl}/archivo-central`, { headers: this.getAuthHeaders(), params })
+    this.http.get<any[]>(`${this.apiUrl}/archivo-central`, { params })
       .subscribe({
         next: (res) => { this.listaArchivoCentral = res; this.cd.detectChanges(); },
         error: (err) => Swal.fire('Error', err.error?.detail || 'Error al consultar el archivo.', 'error')
@@ -857,7 +1188,7 @@ limpiarFormularioRadicacion() {
     this.http.post(
       `${this.apiUrl}/radicados/${encodeURIComponent(this.radicadoATransferir.nro_radicado)}/transferir-archivo`,
       this.transferenciaData,
-      { headers: this.getAuthHeaders() }
+      
     ).subscribe({
       next: (res: any) => {
         this.mostrarModalTransferencia = false;
@@ -880,43 +1211,36 @@ limpiarFormularioRadicacion() {
 
   verDocumentoRadicado(nroRadicado: string) {
     const url = `${this.apiUrl}/radicados/${encodeURIComponent(nroRadicado)}/documento`;
-    const token = localStorage.getItem('token') || '';
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => {
-        if (!res.ok) throw new Error('Documento no disponible');
-        return res.blob();
-      })
-      .then(blob => {
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-      })
-      .catch(() => Swal.fire('Sin documento', 'No se encontró el archivo adjunto para este radicado.', 'info'));
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        if (this._pdfBlobUrl) URL.revokeObjectURL(this._pdfBlobUrl);
+        this._pdfBlobUrl = URL.createObjectURL(blob);
+        this.pdfUrlSegura = this.sanitizer.bypassSecurityTrustResourceUrl(this._pdfBlobUrl);
+        this.pdfNroRadicado = nroRadicado;
+        this.mostrarModalPdf = true;
+      },
+      error: () => Swal.fire('Sin documento', 'No se encontró el archivo adjunto para este radicado.', 'info')
+    });
   }
 
+  cerrarModalPdf() {
+    this.mostrarModalPdf = false;
+    if (this._pdfBlobUrl) {
+      URL.revokeObjectURL(this._pdfBlobUrl);
+      this._pdfBlobUrl = '';
+    }
+    this.pdfUrlSegura = null;
+  }
+
+  // Filtrado ahora es server-side — este getter solo retorna la página actual
   get radicadosFiltrados(): any[] {
-    const hoy = new Date().toISOString().split('T')[0];
-    return this.listaRadicados.filter(r => {
-      const q = this.busquedaRadicados.toLowerCase();
-      if (q && !(
-        r.nro_radicado?.toLowerCase().includes(q) ||
-        r.nombre_razon_social?.toLowerCase().includes(q) ||
-        r.asunto?.toLowerCase().includes(q) ||
-        r.serie?.toLowerCase().includes(q) ||
-        r.responsable_nombre?.toLowerCase().includes(q)
-      )) return false;
-      if (this.filtrosGestion.tipo && r.tipo_radicado !== this.filtrosGestion.tipo) return false;
-      if (this.filtrosGestion.estado && r.estado !== this.filtrosGestion.estado) return false;
-      if (this.filtrosGestion.serie && !r.serie?.toLowerCase().includes(this.filtrosGestion.serie.toLowerCase())) return false;
-      if (this.filtrosGestion.vencido === 'si' && !(r.fecha_vencimiento && r.fecha_vencimiento < hoy)) return false;
-      if (this.filtrosGestion.vencido === 'no' && (r.fecha_vencimiento && r.fecha_vencimiento < hoy)) return false;
-      return true;
-    });
+    return this.listaRadicados;
   }
 
   limpiarFiltrosGestion() {
     this.busquedaRadicados = '';
     this.filtrosGestion = { tipo: '', estado: '', serie: '', vencido: '' };
-    this.cd.detectChanges();
+    this.aplicarFiltrosRadicados();
   }
 
   // --- LÓGICA DE CARGA MASIVA Y PLANTILLAS ---
@@ -960,7 +1284,7 @@ limpiarFormularioRadicacion() {
 
     const endpoint = tipo === 'trd' ? '/admin/importar-trd-excel' : '/admin/importar-estructura-excel';
 
-    this.http.post(`${this.apiUrl}${endpoint}`, formData, { headers: this.getAuthHeaders() })
+    this.http.post(`${this.apiUrl}${endpoint}`, formData)
       .subscribe({
         next: (res: any) => {
           // --- POP-UP DE ÉXITO ---
@@ -1002,7 +1326,69 @@ limpiarFormularioRadicacion() {
   }
 
   cambiarPassword() {
-    alert("Funcionalidad de cambio de contraseña en desarrollo.");
+    this.mostrarModalConfig = false;
+    this.formCambioPassword = { password_actual: '', password_nuevo: '', password_confirmar: '' };
+    this.errorCambioPassword = '';
+    this.mostrarModalCambioPassword = true;
+    this.cd.detectChanges();
+  }
+
+  confirmarCambioPassword() {
+    this.errorCambioPassword = '';
+    const { password_actual, password_nuevo, password_confirmar } = this.formCambioPassword;
+
+    // Validaciones frontend
+    if (!this.esCambioForzado && !password_actual) {
+      this.errorCambioPassword = 'Ingresa tu contraseña actual.';
+      return;
+    }
+    if (!password_nuevo || !password_confirmar) {
+      this.errorCambioPassword = 'Completa todos los campos.';
+      return;
+    }
+    if (password_nuevo.length < 6) {
+      this.errorCambioPassword = 'La nueva contraseña debe tener al menos 6 caracteres.';
+      return;
+    }
+    if (/^\d+$/.test(password_nuevo)) {
+      this.errorCambioPassword = 'La contraseña no puede ser solo números.';
+      return;
+    }
+    if (/^[a-zA-Z]+$/.test(password_nuevo)) {
+      this.errorCambioPassword = 'La contraseña debe incluir al menos un número.';
+      return;
+    }
+    if (password_nuevo !== password_confirmar) {
+      this.errorCambioPassword = 'Las contraseñas no coinciden.';
+      return;
+    }
+
+    const endpoint = this.esCambioForzado
+      ? `${this.apiUrl}/auth/cambiar-password-inicial`
+      : `${this.apiUrl}/auth/cambiar-password`;
+
+    const payload = this.esCambioForzado
+      ? { password_actual: '', password_nuevo, password_confirmar }
+      : { password_actual, password_nuevo, password_confirmar };
+
+    this.http.post(endpoint, payload)
+      .subscribe({
+        next: () => {
+          localStorage.removeItem('debe_cambiar_password');
+          this.esCambioForzado = false;
+          this.cerrarModales();
+          Swal.fire({
+            icon: 'success',
+            title: '¡Bienvenido a SIADE!',
+            text: 'Tu contraseña ha sido configurada. Ya puedes usar el sistema.',
+            confirmButtonColor: '#2563eb'
+          });
+        },
+        error: (err) => {
+          this.errorCambioPassword = err.error?.detail || 'Error al cambiar la contraseña.';
+          this.cd.detectChanges();
+        }
+      });
   }
 
   abrirModalCrear() {
@@ -1019,18 +1405,19 @@ limpiarFormularioRadicacion() {
     this.mostrarModalUsuarios = false;
     this.mostrarModalConfig = false;
     this.mostrarModalCrearGrupo = false;
-    this.mostrarModalAsignarGrupo = false; 
+    this.mostrarModalAsignarGrupo = false;
+    this.mostrarModalCambioPassword = false;
     this.usuarioSeleccionado = null;
     this.nombreNuevoGrupo = '';
-    this.mostrarModalCrearGrupo = false;
-    this.pasoCreacionGrupo = 1; // <--- VOLVEMOS AL PASO 1 PARA LA PRÓXIMA VEZ
-    this.nombreNuevoGrupo = '';
+    this.pasoCreacionGrupo = 1;
+    this.formCambioPassword = { password_actual: '', password_nuevo: '', password_confirmar: '' };
+    this.errorCambioPassword = '';
   }
 
   // --- GESTIÓN DE DATOS ---
 
   cargarUsuarios() {
-    this.http.get<any[]>(`${this.apiUrl}/admin/listar-usuarios`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/listar-usuarios`)
       .subscribe({
         next: (res) => {
           this.listaUsuarios = res;
@@ -1055,7 +1442,7 @@ limpiarFormularioRadicacion() {
 
       console.log(`%c--- SOLICITANDO CAMBIO DE ESTADO (ID: ${user.id}) ---`, "color: #f43f5e; font-weight: bold;");
 
-      this.http.post(`${this.apiUrl}/admin/cambiar-estado-usuario`, payload, { headers: this.getAuthHeaders() })
+      this.http.post(`${this.apiUrl}/admin/cambiar-estado-usuario`, payload)
         .subscribe({
           next: (res: any) => {
             user.activo = !user.activo;
@@ -1076,7 +1463,7 @@ limpiarFormularioRadicacion() {
   }
 
   obtenerEventos() {
-    this.http.get<any[]>(`${this.apiUrl}/admin/eventos-recientes`, { headers: this.getAuthHeaders() })
+    this.http.get<any[]>(`${this.apiUrl}/admin/eventos-recientes`)
       .subscribe({
         next: (res) => this.eventosRecientes = res,
         error: (err) => console.error('Error en feed de auditoría', err)
@@ -1150,7 +1537,7 @@ limpiarFormularioRadicacion() {
     // El servidor espera un string, le mandamos el array como JSON string
     formData.append('con_copia', JSON.stringify(this.radicado.conCopia || []));
 
-    this.http.post<any>(`${this.apiUrl}/radicar`, formData, { headers: this.getAuthHeaders() })
+    this.http.post<any>(`${this.apiUrl}/radicar`, formData)
       .subscribe({
         next: (res) => {
           Swal.fire('✅ ÉXITO', `Radicado ${res.numero} generado.`, 'success');
@@ -1164,22 +1551,105 @@ limpiarFormularioRadicacion() {
       });
   }
 
-  crearUsuario() {
-    const formData = new FormData();
-    formData.append('usuario_nuevo', this.nuevoUser.usuario);
-    formData.append('password_nueva', this.nuevoUser.password);
-    formData.append('nombre_completo', this.nuevoUser.nombre);
-    formData.append('rol_id', this.nuevoUser.rol_id.toString());
+  cargarAuditLogs(page: number = 1) {
+    this.auditPaginacion.page = page;
+    const f = this.filtrosAudit;
+    let params = `page=${page}&per_page=${this.auditPaginacion.per_page}`;
+    if (f.usuario)     params += `&usuario=${encodeURIComponent(f.usuario)}`;
+    if (f.modulo)      params += `&modulo=${f.modulo}`;
+    if (f.fecha_desde) params += `&fecha_desde=${f.fecha_desde}`;
+    if (f.fecha_hasta) params += `&fecha_hasta=${f.fecha_hasta}`;
 
-    this.http.post(`${this.apiUrl}/admin/crear-usuario`, formData, { headers: this.getAuthHeaders() })
+    this.http.get<any>(`${this.apiUrl}/admin/audit-logs?${params}`)
+      .subscribe({
+        next: (res) => {
+          this.listaAuditLogs = res.items;
+          this.auditPaginacion = { page: res.page, per_page: res.per_page, total: res.total, total_pages: res.total_pages };
+          this.cd.detectChanges();
+        },
+        error: () => Swal.fire('Error', 'No se pudieron cargar los logs de auditoría.', 'error')
+      });
+  }
+
+  cambiarPaginaAudit(page: number) {
+    if (page < 1 || page > this.auditPaginacion.total_pages) return;
+    this.cargarAuditLogs(page);
+  }
+
+  exportarAuditCSV() {
+    const f = this.filtrosAudit;
+    let params = '';
+    if (f.usuario)     params += `&usuario=${encodeURIComponent(f.usuario)}`;
+    if (f.modulo)      params += `&modulo=${f.modulo}`;
+    if (f.fecha_desde) params += `&fecha_desde=${f.fecha_desde}`;
+    if (f.fecha_hasta) params += `&fecha_hasta=${f.fecha_hasta}`;
+
+    const url = `${this.apiUrl}/admin/audit-logs/export?${params.substring(1)}`;
+
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const fecha = new Date().toISOString().slice(0, 10);
+        a.download = `auditoria_siade_${fecha}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      },
+      error: () => Swal.fire('Error', 'No se pudo exportar el CSV.', 'error')
+    });
+  }
+
+  crearUsuario() {
+    if (!this.nuevoUser.nombre.trim() || !this.nuevoUser.usuario.trim()) {
+      Swal.fire('Campos incompletos', 'El nombre y el ID de usuario son obligatorios.', 'warning');
+      return;
+    }
+
+    const payload = {
+      usuario: this.nuevoUser.usuario.trim().toLowerCase(),
+      nombre_completo: this.nuevoUser.nombre.trim(),
+      rol_id: this.nuevoUser.rol_id
+    };
+
+    this.http.post(`${this.apiUrl}/admin/crear-usuario`, payload)
       .subscribe({
         next: (res: any) => {
-          alert(`Usuario registrado.\nSecreto 2FA: ${res.secret_2fa}`);
           this.cerrarModales();
-          this.nuevoUser = { nombre: '', usuario: '', password: '', rol_id: 3 };
-          this.obtenerEventos(); 
+          this.nuevoUser = { nombre: '', usuario: '', rol_id: 3 };
+          this.obtenerEventos();
+
+          const roles: Record<number, string> = { 1: 'Administrador', 2: 'Usuario Productor', 3: 'Usuario Consultor' };
+          Swal.fire({
+            icon: 'success',
+            title: '✅ Funcionario Registrado',
+            html: `
+              <p style="margin-bottom:1rem;color:#64748b;">Comparte estos datos con el funcionario de forma segura:</p>
+              <table style="width:100%;border-collapse:collapse;font-size:0.9rem;text-align:left;">
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:0.5rem;font-weight:700;color:#475569;">Usuario</td>
+                  <td style="padding:0.5rem;font-family:monospace;color:#1e293b;">${res.usuario ?? payload.usuario}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:0.5rem;font-weight:700;color:#475569;">Rol</td>
+                  <td style="padding:0.5rem;color:#1e293b;">${roles[payload.rol_id] ?? payload.rol_id}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:0.5rem;font-weight:700;color:#475569;">Contraseña temporal</td>
+                  <td style="padding:0.5rem;font-family:monospace;font-weight:900;color:#dc2626;">${res.password_temporal}</td>
+                </tr>
+                <tr>
+                  <td style="padding:0.5rem;font-weight:700;color:#475569;">Código 2FA</td>
+                  <td style="padding:0.5rem;font-family:monospace;color:#2563eb;">${res.secret_2fa}</td>
+                </tr>
+              </table>
+              <p style="margin-top:1rem;font-size:0.78rem;color:#94a3b8;">El funcionario deberá cambiar su contraseña en el primer inicio de sesión.</p>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#2563eb',
+            width: 520
+          });
         },
-        error: (err) => alert('Error al crear: ' + (err.error?.detail || 'Fallo de red'))
+        error: (err) => Swal.fire('Error', err.error?.detail || 'No se pudo crear el usuario.', 'error')
       });
   }
 
@@ -1213,6 +1683,8 @@ limpiarFormularioRadicacion() {
 
   cerrarSesion() {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('debe_cambiar_password');
     this.router.navigate(['/login']);
   }
 
@@ -1228,9 +1700,419 @@ limpiarFormularioRadicacion() {
     return mapeo[this.tabActivaVentanilla] || 'RAD';
   }
 
+  // =====================================================================
+  // T5.2.2 — Generador Code 128 con canvas nativo
+  // =====================================================================
+
+  /**
+   * Genera un código de barras Code 128B en un canvas HTML y retorna
+   * su dataURL (PNG) listo para preview o para insertar en jsPDF.
+   */
+  generarBarcodeCanvas(texto: string, ancho: number = 280, alto: number = 60): string {
+    // Tabla de valores Code 128B (caracteres ASCII 32–127)
+    const CODE128B_TABLE: number[] = [
+      212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,
+      221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,
+      221231,213212,223112,312131,311222,321122,321221,312212,322112,322211,
+      212123,212321,232121,111323,131123,131321,112313,132113,132311,211313,
+      231113,231311,112133,112331,132131,113123,113321,133121,313121,211331,
+      231131,213113,213311,213131,311123,311321,331121,312113,312311,332111,
+      314111,221411,431111,111224,111422,121124,121421,141122,141221,112214,
+      112412,122114,122411,142112,142211,241211,221114,413111,241112,134111,
+      111242,121142,121241,114212,124112,124211,411212,421112,421211,212141,
+      214121,412121,111143,111341,131141,114113,114311,411113,411311,113141,
+      114131,311141,411131,211412,211214,211232,2331112
+    ];
+
+    const START_B = 104;
+    const STOP    = 106;
+    const FNC1    = 102;
+
+    // Calcular checksum
+    let checksum = START_B;
+    const codes: number[] = [START_B];
+    for (let i = 0; i < texto.length; i++) {
+      const code = texto.charCodeAt(i) - 32;
+      codes.push(code);
+      checksum += code * (i + 1);
+    }
+    codes.push(checksum % 103);
+    codes.push(STOP);
+
+    // Convertir a barras (cada dígito = número de módulos)
+    const barras: { ancho: number; esNegro: boolean }[] = [];
+    codes.forEach((code, idx) => {
+      const pattern = CODE128B_TABLE[code].toString().padStart(6, '0');
+      pattern.split('').forEach((w, i) => {
+        barras.push({ ancho: parseInt(w), esNegro: i % 2 === 0 });
+      });
+    });
+
+    // Dibujar en canvas offscreen
+    const canvas = document.createElement('canvas');
+    const totalModulos = barras.reduce((s, b) => s + b.ancho, 0);
+    const escala = ancho / totalModulos;
+    canvas.width  = ancho;
+    canvas.height = alto;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, ancho, alto);
+
+    let x = 0;
+    barras.forEach(b => {
+      const w = b.ancho * escala;
+      if (b.esNegro) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(Math.round(x), 0, Math.max(1, Math.round(w)), alto - 12);
+      }
+      x += w;
+    });
+
+    // Texto debajo
+    ctx.fillStyle = '#000000';
+    ctx.font = `bold ${Math.max(9, alto * 0.18)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(texto, ancho / 2, alto - 2);
+
+    return canvas.toDataURL('image/png');
+  }
+
+  barcodePreviewUrl: string = '';
+
+  actualizarBarcodePreview() {
+    const prefijo = this.obtenerPrefijo();
+    const anio = new Date().getFullYear();
+    const nro = `${prefijo}-${anio}-${this.nroRadicadoSimulado}`;
+    this.barcodePreviewUrl = this.generarBarcodeCanvas(nro, 260, 52);
+    this.cd.detectChanges();
+  }
+
+  async actualizarQRPreview() {
+    const prefijo = this.obtenerPrefijo();
+    const anio = new Date().getFullYear();
+    const nro = `${prefijo}-${anio}-${this.nroRadicadoSimulado}`;
+    const remitente = this.radicado.nombreRemitente || 'Sin nombre';
+    const asunto = this.radicado.asunto || 'Sin asunto';
+    const fecha = this.fechaActualRadicado;
+    const qrData = `SIADE|${nro}|${remitente}|${asunto}|${fecha}`;
+    try {
+      this.qrPreviewUrl = await QRCode.toDataURL(qrData, {
+        width: 180,
+        margin: 1,
+        color: { dark: '#0f172a', light: '#ffffff' }
+      });
+      this.actualizarBarcodePreview();
+      this.cd.detectChanges();
+    } catch (e) {
+      console.error('Error generando QR preview:', e);
+    }
+  }
+
+  // =====================================================================
+  // T4.5.1 / T4.5.2 — Facturas Electrónicas DIAN UBL 2.1
+  // =====================================================================
+
+  cargarFacturasDian() {
+    const params = this.busquedaFacturasDian ? `?q=${encodeURIComponent(this.busquedaFacturasDian)}` : '';
+    this.http.get<any>(`${environment.apiUrl}/facturas/dian${params}`).subscribe({
+      next: (res) => {
+        this.facturasDianLista = res.facturas || [];
+        this.cd.detectChanges();
+      },
+      error: () => { this.facturasDianLista = []; }
+    });
+  }
+
+  onXmlDianSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const archivo = input.files[0];
+    this.archivoDianSeleccionado = archivo;
+
+    // Parsear el XML (preview)
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+
+    Swal.fire({ title: 'Analizando XML...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    this.http.post<any>(`${environment.apiUrl}/facturas/parsear-xml`, formData).subscribe({
+      next: (res) => {
+        Swal.close();
+        this.previewDianData = res;
+        this.mostrarModalPreviewDian = true;
+        this.cd.detectChanges();
+      },
+      error: (err) => {
+        Swal.close();
+        Swal.fire('Error al procesar XML', err.error?.detail || 'Verifica que sea un XML DIAN válido.', 'error');
+      }
+    });
+
+    // Reset input para permitir volver a seleccionar el mismo archivo
+    input.value = '';
+  }
+
+  confirmarRadicarDian() {
+    if (!this.archivoDianSeleccionado) return;
+    this.cargandoRadicacionDian = true;
+
+    const formData = new FormData();
+    formData.append('archivo', this.archivoDianSeleccionado);
+
+    this.http.post<any>(`${environment.apiUrl}/facturas/radicar-dian`, formData).subscribe({
+      next: (res) => {
+        this.cargandoRadicacionDian = false;
+        this.mostrarModalPreviewDian = false;
+        this.archivoDianSeleccionado = null;
+        this.previewDianData = null;
+        this.cargarFacturasDian();
+        Swal.fire({
+          icon: 'success',
+          title: '¡Factura radicada!',
+          html: `
+            <div style="text-align: left; font-size: 0.9rem;">
+              <p><strong>Radicado:</strong> <span style="color: #2563eb; font-size: 1.1rem;">${res.nro_radicado}</span></p>
+              <p><strong>Factura:</strong> ${res.nro_factura}</p>
+              <p><strong>Proveedor:</strong> ${res.proveedor}</p>
+              <p><strong>Valor:</strong> $${parseFloat(res.valor_a_pagar || '0').toLocaleString('es-CO')} COP</p>
+              <p><strong>Vence:</strong> ${res.fecha_vencimiento}</p>
+            </div>
+          `,
+          confirmButtonText: 'Ver en Gestión Documental'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.seccionActiva = 'gestion-documental';
+            this.cargarRadicados();
+          }
+        });
+        this.cd.detectChanges();
+      },
+      error: (err) => {
+        this.cargandoRadicacionDian = false;
+        Swal.fire('Error al radicar', err.error?.detail || 'No se pudo completar la radicación.', 'error');
+      }
+    });
+  }
+
+  verDetalleFaturaDian(factura: any) {
+    this.http.get<any>(`${environment.apiUrl}/facturas/dian/${factura.id}`).subscribe({
+      next: (res) => {
+        this.facturaDianDetalle = res;
+        this.mostrarModalDetalleDian = true;
+        this.cd.detectChanges();
+      },
+      error: () => {
+        // fallback: usar datos que ya tenemos
+        this.facturaDianDetalle = factura;
+        this.mostrarModalDetalleDian = true;
+        this.cd.detectChanges();
+      }
+    });
+  }
+
+  // =====================================================================
+  // T4.4.3 — Dividir PDF por rango de páginas
+  // =====================================================================
+
+  abrirModalDividirPdf(radicado: any) {
+    this.radicadoPdfActual = radicado;
+    this.infoPdf = null;
+    this.cargandoInfoPdf = true;
+    this.mostrarModalDividirPdf = true;
+    this.pdfPaginaInicio = 1;
+    this.pdfPaginaFin = 1;
+
+    this.http.get<any>(`${environment.apiUrl}/radicados/${radicado.id}/pdf-info`).subscribe({
+      next: (info) => {
+        this.infoPdf = info;
+        this.pdfPaginaFin = info.num_paginas || 1;
+        this.cargandoInfoPdf = false;
+        this.cd.detectChanges();
+      },
+      error: (err) => {
+        this.cargandoInfoPdf = false;
+        this.mostrarModalDividirPdf = false;
+        Swal.fire('Error', err.error?.detail || 'No se pudo obtener información del PDF', 'error');
+      }
+    });
+  }
+
+  ejecutarDividirPdf() {
+    if (!this.radicadoPdfActual) return;
+    if (this.pdfPaginaInicio < 1 || this.pdfPaginaFin < this.pdfPaginaInicio) {
+      Swal.fire('Rango inválido', 'Verifica los números de página ingresados.', 'warning');
+      return;
+    }
+
+    const body = { pagina_inicio: this.pdfPaginaInicio, pagina_fin: this.pdfPaginaFin };
+
+    Swal.fire({ title: 'Extrayendo páginas...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    this.http.post(
+      `${environment.apiUrl}/radicados/${this.radicadoPdfActual.id}/dividir-pdf`,
+      body,
+      { responseType: 'blob' }
+    ).subscribe({
+      next: (blob) => {
+        Swal.close();
+        const nro = this.radicadoPdfActual.nro_radicado || 'doc';
+        const nombreArchivo = `${nro}_p${String(this.pdfPaginaInicio).padStart(3,'0')}-${String(this.pdfPaginaFin).padStart(3,'0')}.pdf`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.mostrarModalDividirPdf = false;
+        Swal.fire('¡Listo!', `Se extrajeron las páginas ${this.pdfPaginaInicio} a ${this.pdfPaginaFin} correctamente.`, 'success');
+      },
+      error: (err) => {
+        Swal.close();
+        Swal.fire('Error', err.error?.detail || 'No se pudo dividir el PDF', 'error');
+      }
+    });
+  }
+
+  cerrarModalDividirPdf() {
+    this.mostrarModalDividirPdf = false;
+    this.infoPdf = null;
+    this.radicadoPdfActual = null;
+  }
+
+  cargarInformes() {
+    this.informesCargando = true;
+    const p: any = {};
+    if (this.filtrosInformes.fecha_desde) p['fecha_desde'] = this.filtrosInformes.fecha_desde;
+    if (this.filtrosInformes.fecha_hasta) p['fecha_hasta'] = this.filtrosInformes.fecha_hasta;
+    if (this.filtrosInformes.tipo)        p['tipo']        = this.filtrosInformes.tipo;
+    if (this.filtrosInformes.dependencia) p['dependencia'] = this.filtrosInformes.dependencia;
+
+    this.http.get<any>(`${this.apiUrl}/admin/stats-informes`, { params: p }).subscribe({
+      next: (res) => {
+        this.informesResumen = res.resumen;
+        this.informesCargando = false;
+        this.informesListas = true;
+        this.informesPeriodo = this.filtrosInformes.fecha_desde && this.filtrosInformes.fecha_hasta
+          ? `${this.filtrosInformes.fecha_desde} al ${this.filtrosInformes.fecha_hasta}`
+          : 'Últimos 12 meses';
+        this.cd.detectChanges();
+        setTimeout(() => { this._dibujarInformes(res); }, 50);
+      },
+      error: () => { this.informesCargando = false; }
+    });
+  }
+
+  private _dibujarInformes(data: any) {
+    const paleta = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#06b6d4', '#f97316'];
+
+    // --- Línea: tendencia mensual ---
+    if (this.chartLineaRef?.nativeElement) {
+      if (this.chartLinea) this.chartLinea.destroy();
+      this.chartLinea = new Chart(this.chartLineaRef.nativeElement, {
+        type: 'line',
+        data: {
+          labels: data.tendencia.labels,
+          datasets: [{
+            label: 'Radicados',
+            data: data.tendencia.values,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f1f5f9' } }
+          }
+        }
+      });
+    }
+
+    // --- Dona: por tipo ---
+    if (this.chartTipoRef?.nativeElement) {
+      if (this.chartTipoPie) this.chartTipoPie.destroy();
+      this.chartTipoPie = new Chart(this.chartTipoRef.nativeElement, {
+        type: 'doughnut',
+        data: {
+          labels: data.por_tipo.labels,
+          datasets: [{
+            data: data.por_tipo.values,
+            backgroundColor: paleta.slice(0, data.por_tipo.labels.length),
+            borderWidth: 2, borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+          cutout: '60%'
+        }
+      });
+    }
+
+    // --- Barras horizontales: ANS por dependencia ---
+    if (this.chartAnsDepRef?.nativeElement) {
+      if (this.chartAnsDep) this.chartAnsDep.destroy();
+      this.chartAnsDep = new Chart(this.chartAnsDepRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: data.ans_dependencia.labels,
+          datasets: [{
+            label: '% Cumplimiento ANS',
+            data: data.ans_dependencia.values,
+            backgroundColor: data.ans_dependencia.values.map((v: number) =>
+              v >= 80 ? '#16a34a' : v >= 60 ? '#f59e0b' : '#ef4444'),
+            borderRadius: 4,
+            borderSkipped: false as const
+          }]
+        },
+        options: {
+          indexAxis: 'y' as const,
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, max: 100, ticks: { callback: (v: any) => v + '%', font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+            y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    }
+  }
+
+  exportarInformesExcel() {
+    const datos = this.informesResumen.map(r => ({
+      'N° Radicado':      r.nro_radicado,
+      'Tipo':             r.tipo_radicado,
+      'Remitente/Origen': r.nombre_razon_social,
+      'Asunto':           r.asunto,
+      'Serie':            r.serie,
+      'Dependencia':      r.seccion_responsable,
+      'Estado':           r.estado,
+      'Fecha Radicación': r.fecha_radicacion,
+      'Fecha Vencimiento': r.fecha_vencimiento || 'Sin plazo'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    ws['!cols'] = [14,12,30,40,20,25,15,20,18].map(w => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Radicados');
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `SIADE_Informe_${fecha}.xlsx`);
+  }
+
   ngOnDestroy() {
     if (this.auditSubscription) {
       this.auditSubscription.unsubscribe();
     }
+    if (this.chartBarras) { this.chartBarras.destroy(); }
+    if (this.chartDona) { this.chartDona.destroy(); }
+    if (this.chartLinea) { this.chartLinea.destroy(); }
+    if (this.chartTipoPie) { this.chartTipoPie.destroy(); }
+    if (this.chartAnsDep) { this.chartAnsDep.destroy(); }
   }
 }

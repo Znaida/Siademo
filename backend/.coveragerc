@@ -1,0 +1,13 @@
+[run]
+omit =
+    app/core/cifrado_docs.py
+    app/core/crypto.py
+    app/core/dian_parser.py
+    app/core/dias_habiles.py
+    app/core/pdf_utils.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError

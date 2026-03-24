@@ -3,7 +3,9 @@ import sqlite3
 
 
 def get_db_connection():
-    if os.getenv("WEBSITE_HOSTNAME"):
+    if os.getenv("TEST_DB_PATH"):
+        db_path = os.getenv("TEST_DB_PATH")
+    elif os.getenv("WEBSITE_HOSTNAME"):
         db_path = "/home/site/wwwroot/storage/database.db"
     else:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -149,6 +151,17 @@ def inicializar_db():
     conn.commit()
 
     # Migración: agregar columnas faltantes
+    # Migración: columnas tabla usuarios
+    columnas_usuarios = [
+        ("debe_cambiar_password", "INTEGER DEFAULT 0"),
+    ]
+    for col, tipo in columnas_usuarios:
+        try:
+            cur.execute(f"ALTER TABLE usuarios ADD COLUMN {col} {tipo}")
+            conn.commit()
+        except Exception:
+            pass
+
     columnas_nuevas = [
         ("tipo_remitente", "TEXT"), ("primer_apellido", "TEXT"), ("segundo_apellido", "TEXT"),
         ("tipo_documento", "TEXT"), ("nro_documento", "TEXT"), ("cargo", "TEXT"),
@@ -161,6 +174,10 @@ def inicializar_db():
         ("con_copia", "TEXT"), ("seccion_origen", "TEXT"), ("funcionario_origen_id", "INTEGER"),
         ("nro_radicado_relacionado", "TEXT"), ("activa_flujo_id", "INTEGER"),
         ("estado", "TEXT DEFAULT 'Radicado'"),
+        ("fecha_radicacion", "TEXT"),
+        ("hash_sha256", "TEXT"),
+        ("paso_actual", "TEXT DEFAULT 'ventanillaRadica'"),
+        ("pasos_completados", "TEXT DEFAULT '[]'"),
     ]
     for col, tipo in columnas_nuevas:
         try:

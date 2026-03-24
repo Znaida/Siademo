@@ -1,0 +1,64 @@
+<div class="flujos-wrapper">
+
+  <!-- Encabezado -->
+  <div class="flujos-header">
+    <h2>{{ datosFlujo ? 'Flujo: ' + datosFlujo.nro_radicado : 'Flujos de Trabajo BPMN' }}</h2>
+    <p *ngIf="!datosFlujo">Diagramas de los procesos documentales de la Alcaldía de Manizales</p>
+    <p *ngIf="datosFlujo">
+      Estado actual: <strong>{{ datosFlujo.estado }}</strong>
+    </p>
+  </div>
+
+  <!-- Selector de flujos (solo en modo general) -->
+  <div class="flujos-tabs" *ngIf="!datosFlujo">
+    <button
+      *ngFor="let flujo of flujos"
+      class="flujo-tab"
+      [class.activo]="flujoActivo.id === flujo.id"
+      [style.--color]="flujo.color"
+      (click)="seleccionarFlujo(flujo)">
+      <span class="tab-icono">{{ flujo.icono }}</span>
+      <span class="tab-nombre">{{ flujo.nombre }}</span>
+    </button>
+  </div>
+
+  <!-- Info del flujo activo (modo general) -->
+  <div class="flujo-info" [style.border-left-color]="flujoActivo.color" *ngIf="!datosFlujo">
+    <span class="flujo-icono-grande">{{ flujoActivo.icono }}</span>
+    <div>
+      <h3 [style.color]="flujoActivo.color">{{ flujoActivo.nombre }}</h3>
+      <p>{{ flujoActivo.descripcion }}</p>
+    </div>
+    <button class="btn-ajustar" (click)="ajustarVista()" title="Ajustar vista">⊞ Ajustar</button>
+  </div>
+
+  <!-- Leyenda colores (modo radicado) -->
+  <div class="bpmn-leyenda" *ngIf="datosFlujo">
+    <div class="leyenda-item"><span class="leyenda-rect verde"></span> Completado</div>
+    <div class="leyenda-item"><span class="leyenda-rect azul-borde"></span> Paso actual</div>
+    <div class="leyenda-item"><span class="leyenda-rect gris"></span> Pendiente</div>
+    <button class="btn-ajustar" (click)="ajustarVista()" style="margin-left:auto">⊞ Ajustar</button>
+  </div>
+
+  <!-- Leyenda BPMN (modo general) -->
+  <div class="bpmn-leyenda" *ngIf="!datosFlujo">
+    <div class="leyenda-item"><span class="leyenda-circulo verde"></span> Inicio / Fin</div>
+    <div class="leyenda-item"><span class="leyenda-rect azul"></span> UserTask (persona)</div>
+    <div class="leyenda-item"><span class="leyenda-rect gris"></span> ServiceTask (sistema)</div>
+    <div class="leyenda-item"><span class="leyenda-rombo"></span> Gateway (decisión)</div>
+    <div class="leyenda-item"><span class="leyenda-reloj"></span> ANS = tiempo límite</div>
+  </div>
+
+  <!-- Visor BPMN -->
+  <div class="bpmn-visor-card">
+    <div *ngIf="cargando" class="bpmn-overlay">
+      <div class="bpmn-spinner"></div>
+      <p>Cargando diagrama...</p>
+    </div>
+    <div *ngIf="error" class="bpmn-error">
+      <span>⚠️ {{ error }}</span>
+    </div>
+    <div #bpmnContainer class="bpmn-canvas"></div>
+  </div>
+
+</div>

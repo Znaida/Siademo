@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import ALLOWED_ORIGINS
 from app.core.database import inicializar_db
+from app.core.middleware import AuditMiddleware
 from app.routers import auth, radicados, admin, gestion, archivo
 
 app = FastAPI(title="SIADE - Sistema Integral de Administración y Gestión Documental", version="1.0.0")
 
+# CORS debe ir antes que AuditMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -13,6 +15,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware de auditoría — registra automáticamente cada acción
+app.add_middleware(AuditMiddleware)
 
 inicializar_db()
 

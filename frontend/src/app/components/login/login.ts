@@ -37,7 +37,9 @@ export class Login implements OnInit {
 
   ngOnInit() {
     // Limpiamos rastro de sesión previa
-    localStorage.removeItem('token'); 
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('debe_cambiar_password');
     this.obtenerCaptcha();
 
     this.route.queryParams.subscribe(params => {
@@ -110,7 +112,9 @@ export class Login implements OnInit {
           } else {
             // ÉXITO: Guardamos JWT y entramos a SIADE
             localStorage.setItem('token', res.access_token);
-            this.router.navigate(['/dashboard']); 
+            localStorage.setItem('refresh_token', res.refresh_token || '');
+            localStorage.setItem('debe_cambiar_password', res.debe_cambiar_password ? '1' : '0');
+            this.router.navigate(['/dashboard']);
           }
           this.cd.detectChanges();
         },

@@ -1,33 +1,36 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { Login } from './components/login/login';
-import { Dashboard } from './components/dashboard/dashboard';
-import { UsuariosLista } from './admin/usuarios-lista/usuarios-lista'; // <--- Importamos el nuevo componente
-import { authGuard } from './guards/auth.guard'; 
+import { RouterModule, Routes, PreloadAllModules } from '@angular/router';
+import { autoLoginGuard } from './guards/auto-login.guard';
 
 const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', component: Login },
-  
-  // Dashboard protegido
-  { 
-    path: 'dashboard', 
-    component: Dashboard, 
-    canActivate: [authGuard] 
+  {
+    path: '',
+    redirectTo: 'login',
+    pathMatch: 'full'
   },
-
-  // RUTA DE GESTIÓN JERÁRQUICA [Requisito 1.15]
-  { 
-    path: 'admin/usuarios', 
-    component: UsuariosLista, 
-    canActivate: [authGuard] // <--- El guardia también vigila la lista de cuentas
+  {
+    path: 'login',
+    canActivate: [autoLoginGuard],
+    loadChildren: () =>
+      import('./features/auth/auth.module').then(m => m.AuthModule)
   },
-  
-  { path: '**', redirectTo: 'login' } 
+  {
+    path: 'dashboard',
+    loadChildren: () =>
+      import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
+  },
+  {
+    path: '**',
+    redirectTo: 'login'
+  }
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [
+    RouterModule.forRoot(routes, {
+      preloadingStrategy: PreloadAllModules
+    })
+  ],
   exports: [RouterModule]
 })
 export class AppRoutingModule { }

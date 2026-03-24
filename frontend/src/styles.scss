@@ -1,11 +1,68 @@
 @use "tailwindcss";
 
-/* SEGÚN TU IMAGEN: 
-   Desde 'src/styles.scss', entramos a la carpeta 'app' para buscar todo.
-*/
 @source "./app/**/*.{html,ts}";
 
-/* Prueba física de carga */
+html {
+  font-size: 14px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
-  border: 15px solid #2563eb !important; 
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  cursor: default;
+  user-select: none;
+}
+
+input, textarea, select {
+  user-select: text;
+  cursor: text;
+}
+
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
+p, span, td, th, li, h1, h2, h3, h4, h5, h6, label {
+  user-select: none;
+}
+
+// ── Coloreado de nodos BPMN (global porque bpmn-js renderiza fuera del shadow DOM) ──
+
+// Paso actual → azul
+.flujo-actual .djs-visual > :nth-child(1),
+.nodo-actual .djs-visual > :nth-child(1) {
+  fill: #dbeafe !important;
+  stroke: #2563eb !important;
+  stroke-width: 3px !important;
+}
+.flujo-actual .djs-visual text,
+.nodo-actual .djs-visual text {
+  fill: #1e40af !important;
+  font-weight: 700 !important;
+}
+
+// Paso completado → verde
+.flujo-completado .djs-visual > :nth-child(1),
+.nodo-completado .djs-visual > :nth-child(1) {
+  fill: #dcfce7 !important;
+  stroke: #16a34a !important;
+  stroke-width: 2px !important;
+}
+.flujo-completado .djs-visual text,
+.nodo-completado .djs-visual text {
+  fill: #15803d !important;
+}
+
+// Paso pendiente → gris
+.nodo-pendiente .djs-visual > :nth-child(1) {
+  fill: #f1f5f9 !important;
+  stroke: #cbd5e1 !important;
+}
+.nodo-pendiente .djs-visual text {
+  fill: #94a3b8 !important;
 }

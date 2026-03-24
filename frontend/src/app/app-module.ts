@@ -1,32 +1,22 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { UsuariosLista } from './admin/usuarios-lista/usuarios-lista';
+import { NgModule, provideBrowserGlobalErrorListeners, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
-import { Login } from './components/login/login';
-import { Dashboard } from './components/dashboard/dashboard'; 
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { SiadeErrorHandler } from './core/siade-error-handler';
 
 @NgModule({
-  declarations: [
-    App,
-    Login,
-    Dashboard
-  ],
+  declarations: [App],
   imports: [
     BrowserModule,
-    AppRoutingModule,
     HttpClientModule,
-    FormsModule,
-    ReactiveFormsModule,
-    CommonModule,
-    UsuariosLista
+    AppRoutingModule
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: ErrorHandler, useClass: SiadeErrorHandler },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
   ],
   bootstrap: [App]
 })
