@@ -28,6 +28,19 @@ app.include_router(gestion.router)
 app.include_router(archivo.router)
 
 
+@app.get("/debug-db")
+def debug_db():
+    import os
+    from app.core.database import is_postgres, _PSYCOPG2
+    return {
+        "DATABASE_URL_set": bool(os.getenv("DATABASE_URL")),
+        "TEST_DB_PATH_set": bool(os.getenv("TEST_DB_PATH")),
+        "WEBSITE_HOSTNAME": os.getenv("WEBSITE_HOSTNAME"),
+        "is_postgres": is_postgres(),
+        "psycopg2_available": _PSYCOPG2,
+    }
+
+
 @app.get("/")
 def root():
     return {"status": "ok", "sistema": "SIADE", "version": "1.0.0"}
