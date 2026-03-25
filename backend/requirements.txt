@@ -17,3 +17,7 @@ qrcode[pil]
 cryptography
 pypdf
 lxml
+httpx
+pytest
+pytest-cov
+pytest-asyncio
