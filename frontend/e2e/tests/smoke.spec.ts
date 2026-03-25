@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
  * Se ejecutan contra la URL de Azure después de cada deploy.
  * Verifican que la app está viva y los servicios esenciales responden.
  *
- * Variable de entorno: BASE_URL=https://ashy-desert-090fd4a0f.5.azurestaticapps.net
+ * Variable de entorno: BASE_URL=https://ashy-desert-090fd4a0f.2.azurestaticapps.net
  */
 
 test.describe('Smoke Tests — Azure Deploy', () => {

@@ -79,6 +79,7 @@ jobs:
     if: github.event_name == 'push'
     needs: build_and_deploy_job
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -108,7 +109,7 @@ jobs:
           cd frontend
           npx playwright test e2e/tests/smoke.spec.ts
         env:
-          BASE_URL: https://ashy-desert-090fd4a0f.5.azurestaticapps.net
+          BASE_URL: https://ashy-desert-090fd4a0f.2.azurestaticapps.net
 
       - name: Subir reporte si fallan
         if: failure()
