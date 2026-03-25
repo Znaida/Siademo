@@ -101,7 +101,7 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: Esperar que Azure esté listo
-        run: sleep 30
+        run: sleep 120
 
       - name: Correr smoke tests contra Azure
         run: |
