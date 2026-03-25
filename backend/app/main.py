@@ -31,13 +31,17 @@ app.include_router(archivo.router)
 @app.get("/debug-db")
 def debug_db():
     import os
-    from app.core.database import is_postgres, _PSYCOPG2
+    db_url = os.getenv("DATABASE_URL", "")
+    try:
+        import psycopg2
+        pg_ok = True
+    except Exception as e:
+        pg_ok = str(e)
     return {
-        "DATABASE_URL_set": bool(os.getenv("DATABASE_URL")),
-        "TEST_DB_PATH_set": bool(os.getenv("TEST_DB_PATH")),
+        "DATABASE_URL_set": bool(db_url),
+        "DATABASE_URL_preview": db_url[:30] if db_url else None,
+        "psycopg2_available": pg_ok,
         "WEBSITE_HOSTNAME": os.getenv("WEBSITE_HOSTNAME"),
-        "is_postgres": is_postgres(),
-        "psycopg2_available": _PSYCOPG2,
     }
 
 
