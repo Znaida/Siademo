@@ -22,6 +22,13 @@ async def obtener_usuario_actual(request: Request) -> dict:
     token = auth_header.split(" ")[1]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # T7.2.2 — Verificar blacklist: token invalidado por logout
+        jti = payload.get("jti")
+        if jti:
+            from app.core.redis_client import get_redis
+            redis = get_redis()
+            if redis and redis.get(f"blacklist:{jti}"):
+                raise HTTPException(status_code=401, detail="Sesión cerrada. Inicie sesión nuevamente.")
         return {"usuario": payload.get("sub"), "rol": payload.get("rol"), "id": payload.get("id_usuario")}
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
@@ -34,6 +41,13 @@ async def obtener_admin_actual(request: Request) -> dict:
     token = auth_header.split(" ")[1]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # T7.2.2 — Verificar blacklist
+        jti = payload.get("jti")
+        if jti:
+            from app.core.redis_client import get_redis
+            redis = get_redis()
+            if redis and redis.get(f"blacklist:{jti}"):
+                raise HTTPException(status_code=401, detail="Sesión cerrada. Inicie sesión nuevamente.")
         rol = payload.get("rol")
         if rol is None or rol > 1:
             raise HTTPException(status_code=403, detail="No tiene rango suficiente")

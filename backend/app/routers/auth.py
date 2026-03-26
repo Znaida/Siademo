@@ -1,10 +1,12 @@
 import random
+import uuid
 import pyotp
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request, Form, Depends
 from jose import jwt
 from app.core.config import SECRET_KEY, ALGORITHM, pwd_context, settings
 from app.core.database import get_db_connection
+from app.core.redis_client import get_redis
 from app.core.security import firmar_resultado, verificar_password, registrar_evento, obtener_usuario_actual
 from app.schemas.usuario import CambiarPasswordData
 
@@ -63,6 +65,20 @@ async def login(
     captcha_res: int = Form(...),
     captcha_token: str = Form(...)
 ):
+    # T7.2.1 — Rate limiting: máximo 5 intentos por IP cada 15 minutos
+    redis = get_redis()
+    if redis:
+        ip = request.client.host
+        rl_key = f"rate_limit:login:{ip}"
+        intentos = redis.incr(rl_key)
+        if intentos == 1:
+            redis.expire(rl_key, 900)  # 15 minutos
+        if intentos > 5:
+            raise HTTPException(
+                status_code=429,
+                detail="Demasiados intentos fallidos. Espere 15 minutos antes de intentarlo de nuevo."
+            )
+
     if firmar_resultado(captcha_res) != captcha_token:
         raise HTTPException(status_code=401, detail="Captcha incorrecto")
 
@@ -97,6 +113,7 @@ async def verify_2fa(request: Request, usuario: str = Form(...), codigo: str = F
             "sub": usuario,
             "id_usuario": user['id'],
             "rol": user['rol_id'],
+            "jti": str(uuid.uuid4()),  # T7.2.2 — ID único para blacklist al logout
             "exp": datetime.utcnow() + timedelta(hours=8)
         }
         token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
@@ -185,3 +202,24 @@ async def cambiar_password(
     finally:
         cur.close()
         conn.close()
+
+
+@router.post("/auth/logout")
+async def logout(request: Request, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    """T7.2.2 — Invalida el token JWT agregando su jti a la blacklist en Redis."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.split(" ")[1] if " " in auth_header else ""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        jti = payload.get("jti")
+        exp = payload.get("exp")
+        if jti and exp:
+            redis = get_redis()
+            if redis:
+                ttl = int(exp - datetime.utcnow().timestamp())
+                if ttl > 0:
+                    redis.set(f"blacklist:{jti}", "1", ex=ttl)
+    except Exception:
+        pass  # Si el token ya expiró o falla el decode, igualmente cerramos sesión
+    registrar_evento(usuario_actual['id'], 'LOGOUT', 'AUTH', 'Sesión cerrada', request)
+    return {"mensaje": "Sesión cerrada exitosamente"}

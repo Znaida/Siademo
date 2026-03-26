@@ -19,6 +19,7 @@ pypdf
 lxml
 httpx
 psycopg2-binary
+upstash-redis
 pytest
 pytest-cov
 pytest-asyncio

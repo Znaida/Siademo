@@ -1684,6 +1684,13 @@ limpiarFormularioRadicacion() {
   }
 
   cerrarSesion() {
+    // T7.2.2 — Invalidar token en el servidor (blacklist Redis) antes de limpiar localmente
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.http.post(`${this.apiUrl}/auth/logout`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).subscribe({ error: () => {} }); // fire-and-forget: siempre limpiamos local
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('debe_cambiar_password');
