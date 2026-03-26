@@ -863,10 +863,10 @@ limpiarFormularioRadicacion() {
       next: (res) => {
         this.graficasListas = true;
         this.cd.detectChanges();
-        // Esperar un tick para que el DOM renderice los canvas
-        setTimeout(() => { this._inicializarGraficas(res); }, 50);
+        // Dar tiempo al navegador para que pinte los canvas antes de inicializar Chart.js
+        setTimeout(() => { this._inicializarGraficas(res); }, 150);
       },
-      error: () => {}
+      error: (err) => { console.error('stats-graficas error:', err); }
     });
   }
 

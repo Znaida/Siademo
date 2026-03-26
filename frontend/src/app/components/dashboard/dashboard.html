@@ -280,7 +280,7 @@
       </div>
 
       <!-- Gráficas Chart.js -->
-      <div *ngIf="graficasListas" style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem;">
+      <div [style.display]="graficasListas ? 'grid' : 'none'" style="grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem;">
 
         <!-- Barras: últimos 7 días por tipo -->
         <div style="background:#fff; border-radius:14px; padding:1.4rem 1.6rem; box-shadow:0 1px 8px rgba(0,0,0,0.07);">
