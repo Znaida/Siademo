@@ -246,10 +246,17 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Fechas como parámetros (compatible SQLite y PostgreSQL)
+        from datetime import date, timedelta as _td
+        _hoy = date.today().isoformat()
+        _ayer = (date.today() - _td(days=1)).isoformat()
+        _tres_dias = (date.today() + _td(days=3)).isoformat()
+        _inicio_mes = date.today().replace(day=1).isoformat()
+
         # --- Volumen de radicación ---
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = DATE('now')")
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = ?", (_hoy,))
         hoy = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = DATE('now', '-1 day')")
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = ?", (_ayer,))
         ayer = cur.fetchone()[0]
         variacion = round(((hoy - ayer) / ayer * 100), 1) if ayer > 0 else 0
 
@@ -258,10 +265,10 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
         activos = cur.fetchone()[0]
         cur.execute("""SELECT COUNT(*) FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
-                       AND (fecha_vencimiento IS NULL OR fecha_vencimiento >= DATE('now'))""")
+                       AND (fecha_vencimiento IS NULL OR fecha_vencimiento >= ?)""", (_hoy,))
         dentro_plazo = cur.fetchone()[0]
         pct_ans = round((dentro_plazo / activos * 100), 1) if activos > 0 else 100.0
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_vencimiento = DATE('now')")
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_vencimiento = ?", (_hoy,))
         vencen_hoy = cur.fetchone()[0]
 
         # --- Eficiencia operativa ---
@@ -276,7 +283,7 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
         # --- Archivo digital ---
         cur.execute("SELECT COUNT(*) FROM archivo_central")
         archivados = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM archivo_central WHERE DATE(fecha_transferencia) >= DATE('now','start of month')")
+        cur.execute("SELECT COUNT(*) FROM archivo_central WHERE fecha_transferencia >= ?", (_inicio_mes,))
         archivados_mes = cur.fetchone()[0]
         pct_archivo_mes = round((archivados_mes / archivados * 100), 1) if archivados > 0 else 0.0
 
@@ -284,11 +291,11 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
         cur.execute("""SELECT COUNT(*) FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
                        AND fecha_vencimiento IS NOT NULL
-                       AND fecha_vencimiento < DATE('now')""")
+                       AND fecha_vencimiento < ?""", (_hoy,))
         vencidos = cur.fetchone()[0]
         cur.execute("""SELECT COUNT(*) FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
-                       AND fecha_vencimiento BETWEEN DATE('now') AND DATE('now','+3 days')""")
+                       AND fecha_vencimiento BETWEEN ? AND ?""", (_hoy, _tres_dias))
         en_riesgo = cur.fetchone()[0]
         a_tiempo = max(0, activos - vencidos - en_riesgo)
         pct_cumplimiento  = round(a_tiempo  / activos * 100, 1) if activos > 0 else 100.0
@@ -300,7 +307,7 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
             SELECT r.nro_radicado, r.nombre_razon_social, r.asunto,
                    r.estado, r.fecha_vencimiento, r.tipo_radicado
             FROM radicados r
-            ORDER BY r.rowid DESC LIMIT 5
+            ORDER BY r.id DESC LIMIT 5
         """)
         from datetime import date
         hoy_date = date.today()
@@ -455,12 +462,14 @@ async def obtener_stats_informes(
         dep_rows = cur.fetchall()
 
         # --- ANS por dependencia ---
+        from datetime import date as _date
+        _hoy_inf = _date.today().isoformat()
         cur.execute(f"""SELECT COALESCE(NULLIF(seccion_responsable,''), 'Sin asignar') as dep,
                         COUNT(*) as total,
-                        SUM(CASE WHEN (fecha_vencimiento IS NULL OR fecha_vencimiento >= DATE('now'))
+                        SUM(CASE WHEN (fecha_vencimiento IS NULL OR fecha_vencimiento >= ?)
                                  OR estado IN ('Archivado','En Archivo Central') THEN 1 ELSE 0 END) as a_tiempo
                         FROM radicados {where}
-                        GROUP BY dep ORDER BY total DESC LIMIT 8""", params_base)
+                        GROUP BY dep ORDER BY total DESC LIMIT 8""", [_hoy_inf] + params_base)
         ans_dep_rows = cur.fetchall()
         ans_dep_labels = [r['dep'] for r in ans_dep_rows]
         ans_dep_pct = [

@@ -4,7 +4,7 @@ Toda la lógica de acceso a BD para radicados vive aquí.
 Los routers llaman estas funciones; no tocan la BD directamente.
 """
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from fastapi import HTTPException
 from app.core.database import get_db_connection
 from app.schemas.radicado import RadicadoCreate, TrasladoData, ArchivarData
@@ -100,7 +100,7 @@ def listar_radicados(
                    r.nro_radicado_relacionado, r.hash_sha256,
                    (SELECT nro_radicado FROM radicados r2
                     WHERE r2.nro_radicado_relacionado = r.nro_radicado LIMIT 1) AS nro_respuesta,
-                   u.nombre_completo AS responsable_nombre, r.rowid as id
+                   u.nombre_completo AS responsable_nombre, r.id
             FROM radicados r
             LEFT JOIN usuarios u ON r.funcionario_responsable_id = u.id
         """
@@ -139,9 +139,11 @@ def listar_radicados(
             condiciones.append("r.serie LIKE ?")
             params.append(f"%{serie_filtro}%")
         if vencido == 'si':
-            condiciones.append("r.fecha_vencimiento IS NOT NULL AND r.fecha_vencimiento < date('now')")
+            condiciones.append("r.fecha_vencimiento IS NOT NULL AND r.fecha_vencimiento < ?")
+            params.append(date.today().isoformat())
         elif vencido == 'no':
-            condiciones.append("(r.fecha_vencimiento IS NULL OR r.fecha_vencimiento >= date('now'))")
+            condiciones.append("(r.fecha_vencimiento IS NULL OR r.fecha_vencimiento >= ?)")
+            params.append(date.today().isoformat())
 
         where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
 
@@ -151,7 +153,7 @@ def listar_radicados(
 
         # Paginación
         offset = (page - 1) * per_page
-        query = f"{base_select} {where} ORDER BY r.rowid DESC LIMIT ? OFFSET ?"
+        query = f"{base_select} {where} ORDER BY r.id DESC LIMIT ? OFFSET ?"
         cur.execute(query, params + [per_page, offset])
 
         items = [dict(r) for r in cur.fetchall()]

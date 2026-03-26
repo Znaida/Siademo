@@ -54,6 +54,6 @@ jobs:
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'kronosdemos'
+          app-name: 'kronosdemos-fbeyekffbfe9fre7'
           publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
           package: './backend'

@@ -4,6 +4,7 @@ import random
 #import psycopg2
 #import psycopg2.extras 
 import pyotp
+import qrcode
 import hashlib
 import json
 import pandas as pd
@@ -170,6 +171,46 @@ def inicializar_db_alfa():
             path_principal TEXT,
             fecha_transferencia TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             transferido_por INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS workflow_instances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nro_radicado TEXT NOT NULL UNIQUE,
+            tipo_flujo TEXT NOT NULL,
+            paso_actual TEXT NOT NULL,
+            pasos_completados TEXT DEFAULT '[]',
+            estado TEXT DEFAULT 'activo',
+            iniciado_por INTEGER,
+            fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS facturas_dian (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nro_radicado TEXT,
+            tipo_documento TEXT,
+            nro_factura TEXT UNIQUE NOT NULL,
+            cufe TEXT,
+            fecha_emision TEXT,
+            nit_proveedor TEXT,
+            nombre_proveedor TEXT,
+            correo_proveedor TEXT,
+            telefono_proveedor TEXT,
+            direccion_proveedor TEXT,
+            ciudad_proveedor TEXT,
+            nit_receptor TEXT,
+            nombre_receptor TEXT,
+            valor_bruto TEXT,
+            descuentos TEXT,
+            iva TEXT,
+            valor_a_pagar TEXT,
+            moneda TEXT DEFAULT 'COP',
+            forma_pago TEXT,
+            fecha_vence_pago TEXT,
+            items_json TEXT,
+            path_xml TEXT,
+            radicado_automatico INTEGER DEFAULT 0,
+            estado TEXT DEFAULT 'pendiente',
+            creado_por INTEGER,
+            fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
     conn.commit()
@@ -342,32 +383,52 @@ class UserCreate(BaseModel):
 
 # --- 5. DEPENDENCIAS Y CONEXIÓN ---
 
-async def obtener_usuario_actual(request: Request):
+def _decodificar_token(request: Request) -> dict:
+    """Decodifica y valida el JWT de la petición. Distingue expirado vs inválido."""
+    from jose import ExpiredSignatureError
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token no proporcionado")
-    
     token = auth_header.split(" ")[1]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return {"usuario": payload.get("sub"), "rol": payload.get("rol"), "id": payload.get("id_usuario")}
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Token inválido: use el access_token, no el refresh_token")
+        return payload
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sesión expirada. Inicie sesión nuevamente")
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+
+async def obtener_usuario_actual(request: Request):
+    payload = _decodificar_token(request)
+    return {"usuario": payload.get("sub"), "rol": payload.get("rol"), "id": payload.get("id_usuario")}
+
+
 async def obtener_admin_actual(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Token no proporcionado")
-    
-    token = auth_header.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        rol = payload.get("rol")
-        if rol is None or rol > 1:
-            raise HTTPException(status_code=403, detail="No tiene rango suficiente")
-        return {"usuario": payload.get("sub"), "rol": rol, "id": payload.get("id_usuario")}
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+    payload = _decodificar_token(request)
+    rol = payload.get("rol")
+    if rol is None or rol > 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: se requiere rol Administrador o superior")
+    return {"usuario": payload.get("sub"), "rol": rol, "id": payload.get("id_usuario")}
+
+
+async def obtener_superadmin_actual(request: Request):
+    """Solo SuperAdmin (rol 0) puede acceder."""
+    payload = _decodificar_token(request)
+    if payload.get("rol") != 0:
+        raise HTTPException(status_code=403, detail="Acceso denegado: se requiere rol Super Administrador")
+    return {"usuario": payload.get("sub"), "rol": 0, "id": payload.get("id_usuario")}
+
+
+async def verificar_rol_minimo(request: Request, rol_minimo: int) -> dict:
+    """Verifica que el usuario tenga un rol <= rol_minimo (menor = más privilegios)."""
+    payload = _decodificar_token(request)
+    rol = payload.get("rol")
+    if rol is None or rol > rol_minimo:
+        raise HTTPException(status_code=403, detail=f"Acceso denegado: rol insuficiente")
+    return {"usuario": payload.get("sub"), "rol": rol, "id": payload.get("id_usuario")}
 
 # --- 6. FUNCIONES DE APOYO (AUDITORÍA Y SECUENCIA) ---
 
@@ -436,21 +497,33 @@ async def setup_inicial():
         if not admin_user or not admin_pass:
             raise HTTPException(status_code=500, detail="Variables ADMIN_USER y ADMIN_PASS no están configuradas en el servidor.")
 
+        from app.core.crypto import cifrar_secret
         password_hash = pwd_context.hash(admin_pass)
         secret_2fa = pyotp.random_base32()
+        secret_cifrado = cifrar_secret(secret_2fa)
 
         cur.execute("""
             INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo)
             VALUES (?, ?, ?, 0, ?, 1)
-        """, (admin_user, password_hash, admin_name, secret_2fa))
+        """, (admin_user, password_hash, admin_name, secret_cifrado))
         conn.commit()
+
+        # Generar QR code en base64
+        from io import BytesIO
+        import base64
+        uri = pyotp.totp.TOTP(secret_2fa).provisioning_uri(name=admin_user, issuer_name="SIADE")
+        qr_img = qrcode.make(uri)
+        buf = BytesIO()
+        qr_img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
         return {
             "mensaje": "✅ Administrador creado exitosamente",
             "usuario": admin_user,
             "nombre": admin_name,
             "secret_2fa": secret_2fa,
-            "tip": "Abre Google Authenticator → Agregar cuenta → Ingresar clave → pega el secret_2fa"
+            "qr_code": f"data:image/png;base64,{qr_b64}",
+            "tip": "Escanea el QR con Google Authenticator o ingresa el secret_2fa manualmente"
         }
     finally:
         cur.close()
@@ -487,15 +560,80 @@ async def verify_2fa(request: Request, usuario: str = Form(...), codigo: str = F
     conn = get_db_connection(); cur = conn.cursor()
     cur.execute("SELECT id, secret_2fa, rol_id FROM usuarios WHERE usuario = ?", (usuario,))
     user = cur.fetchone()
-    secret = user['secret_2fa'] if user['secret_2fa'] else "JBSWY3DPEHPK3PXP" 
+    from app.core.crypto import descifrar_secret
+    secret_raw = user['secret_2fa'] if user['secret_2fa'] else "JBSWY3DPEHPK3PXP"
+    secret = descifrar_secret(secret_raw)
     totp = pyotp.TOTP(secret)
-    if totp.verify(codigo):
-        token_data = {"sub": usuario, "id_usuario": user['id'], "rol": user['rol_id'], "exp": datetime.utcnow() + timedelta(hours=8)}
-        token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    if totp.verify(codigo, valid_window=1):
+        # Access token: 30 minutos
+        access_data = {"sub": usuario, "id_usuario": user['id'], "rol": user['rol_id'],
+                       "type": "access", "exp": datetime.utcnow() + timedelta(minutes=30)}
+        access_token = jwt.encode(access_data, SECRET_KEY, algorithm=ALGORITHM)
+        # Refresh token: 7 días
+        refresh_data = {"sub": usuario, "id_usuario": user['id'], "rol": user['rol_id'],
+                        "type": "refresh", "exp": datetime.utcnow() + timedelta(days=7)}
+        refresh_token = jwt.encode(refresh_data, SECRET_KEY, algorithm=ALGORITHM)
+
+        conn2 = get_db_connection(); cur2 = conn2.cursor()
+        cur2.execute("SELECT debe_cambiar_password FROM usuarios WHERE id = ?", (user['id'],))
+        u = cur2.fetchone()
+        conn2.close()
+
         registrar_evento(user['id'], 'LOGIN_SUCCESS', 'AUTH', 'Sesión iniciada', request)
-        return {"access_token": token, "token_type": "bearer", "rol": user['rol_id']}
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "rol": user['rol_id'],
+            "debe_cambiar_password": bool(u['debe_cambiar_password']) if u else False
+        }
     else:
         raise HTTPException(status_code=401, detail="TOTP inválido")
+
+@app.post("/auth/2fa/setup")
+async def setup_2fa(user_info: dict = Depends(obtener_usuario_actual)):
+    """Genera nuevo secreto TOTP + QR para el usuario autenticado."""
+    from app.core.crypto import cifrar_secret
+    from io import BytesIO
+    import base64 as b64mod
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        secret_2fa = pyotp.random_base32()
+        secret_cifrado = cifrar_secret(secret_2fa)
+        usuario = user_info['usuario']
+        uri = pyotp.totp.TOTP(secret_2fa).provisioning_uri(name=usuario, issuer_name="SIADE")
+        qr_img = qrcode.make(uri)
+        buf = BytesIO()
+        qr_img.save(buf, format="PNG")
+        qr_b64 = b64mod.b64encode(buf.getvalue()).decode()
+        cur.execute("UPDATE usuarios SET secret_2fa = ? WHERE usuario = ?", (secret_cifrado, usuario))
+        conn.commit()
+        return {
+            "secret_2fa": secret_2fa,
+            "qr_code": f"data:image/png;base64,{qr_b64}",
+            "instrucciones": "Escanea el QR con Google Authenticator. El código anterior quedará inválido."
+        }
+    finally:
+        conn.close()
+
+
+@app.post("/auth/refresh")
+async def refresh_token(refresh_token: str = Form(...)):
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Token no es de tipo refresh")
+        usuario = payload.get("sub")
+        usuario_id = payload.get("id_usuario")
+        rol = payload.get("rol")
+        # Generar nuevo access token
+        access_data = {"sub": usuario, "id_usuario": usuario_id, "rol": rol,
+                       "type": "access", "exp": datetime.utcnow() + timedelta(minutes=30)}
+        nuevo_token = jwt.encode(access_data, SECRET_KEY, algorithm=ALGORITHM)
+        return {"access_token": nuevo_token, "token_type": "bearer"}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Refresh token inválido o expirado")
+
 
 # --- 8. RADICACIÓN OFICIAL DE COMUNICACIONES ---
 
@@ -519,24 +657,29 @@ async def radicar_oficial(
         prefijo = prefix_map.get(data.tipo_radicado, 'NOR')
         nro_radicado = generar_consecutivo(prefijo)
         
-        # 3. Almacenamiento físico de archivo principal
+        # 3. Almacenamiento físico de archivo principal (cifrado AES-256-GCM)
+        from app.core.cifrado_docs import cifrar_bytes
         ext = archivo_principal.filename.split(".")[-1]
-        path_p = f"{UPLOAD_DIR}/{nro_radicado}_principal.{ext}"
-        with open(path_p, "wb") as buffer:
-            shutil.copyfileobj(archivo_principal.file, buffer)
-            
-        # 4. Procesar Anexos
+        path_p = f"{UPLOAD_DIR}/{nro_radicado}_principal.{ext}.enc"
+        contenido_principal = await archivo_principal.read()
+        with open(path_p, "wb") as f:
+            f.write(cifrar_bytes(contenido_principal))
+
+        # 4. Procesar Anexos (cifrados)
         rutas_anexos = []
         if anexos:
             for i, anexo in enumerate(anexos):
                 a_ext = anexo.filename.split(".")[-1]
-                path_a = f"{UPLOAD_DIR}/{nro_radicado}_anexo_{i}.{a_ext}"
-                with open(path_a, "wb") as buffer:
-                    shutil.copyfileobj(anexo.file, buffer)
+                path_a = f"{UPLOAD_DIR}/{nro_radicado}_anexo_{i}.{a_ext}.enc"
+                contenido_anexo = await anexo.read()
+                with open(path_a, "wb") as f:
+                    f.write(cifrar_bytes(contenido_anexo))
                 rutas_anexos.append(path_a)
 
-        # 5. Calcular Fecha Vencimiento
-        vencimiento = datetime.now() + timedelta(days=data.dias_respuesta)
+        # 5. Calcular Fecha Vencimiento en días hábiles colombianos
+        from app.core.dias_habiles import agregar_dias_habiles
+        vencimiento_date = agregar_dias_habiles(datetime.now().date(), data.dias_respuesta)
+        vencimiento = datetime.combine(vencimiento_date, datetime.min.time())
 
         # 6. Guardar en Base de Datos
         cur.execute("""
@@ -610,24 +753,37 @@ async def crear_usuario(request: Request, data: UserCreate, admin_info: dict = D
             raise HTTPException(status_code=400, detail="El ID de usuario ya está en uso.")
 
         # Preparar credenciales
-        hashed_pw = pwd_context.hash(data.password) # Encriptamos password
-        secret_2fa = pyotp.random_base32()        # Generamos clave para Google Authenticator
+        from app.core.crypto import cifrar_secret
+        hashed_pw = pwd_context.hash(data.password)
+        secret_2fa = pyotp.random_base32()
+        secret_cifrado = cifrar_secret(secret_2fa)
+
+        # Generar QR code en base64
+        from io import BytesIO
+        import base64 as b64mod
+        uri = pyotp.totp.TOTP(secret_2fa).provisioning_uri(name=data.usuario, issuer_name="SIADE")
+        qr_img = qrcode.make(uri)
+        buf = BytesIO()
+        qr_img.save(buf, format="PNG")
+        qr_b64 = b64mod.b64encode(buf.getvalue()).decode()
 
         # Insertar en la base de datos
         cur.execute(
-            """INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo) 
+            """INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo)
                VALUES (?, ?, ?, ?, ?, TRUE)""",
-            (data.usuario, hashed_pw, data.nombre_completo, data.rol_id, secret_2fa)
+            (data.usuario, hashed_pw, data.nombre_completo, data.rol_id, secret_cifrado)
         )
         nuevo_id = cur.lastrowid
         conn.commit()
 
         registrar_evento(admin_info['id'], 'CREATE_USER', 'ADMIN', f"Nuevo funcionario: {data.usuario} (Rol: {data.rol_id})", request)
-        
+
         return {
-            "status": "success", 
-            "message": "Usuario creado correctamente", 
-            "secret_2fa": secret_2fa # Se lo devolvemos a Angular para que lo muestre
+            "status": "success",
+            "message": "Usuario creado. Comparte la información de acceso con el funcionario.",
+            "secret_2fa": secret_2fa,
+            "qr_code": f"data:image/png;base64,{qr_b64}",
+            "aviso": "El usuario deberá escanear el QR con Google Authenticator antes de su primer ingreso."
         }
 
     except Exception as e:
@@ -989,6 +1145,17 @@ async def ver_documento_radicado(nro_radicado: str, user_info: dict = Depends(ob
     if not os.path.exists(real_path):
         raise HTTPException(status_code=404, detail="El archivo ya no existe en el servidor.")
 
+    # Descifrar si el archivo está cifrado (.enc)
+    from fastapi.responses import Response
+    if real_path.endswith(".enc"):
+        from app.core.cifrado_docs import descifrar_archivo
+        datos = descifrar_archivo(real_path)
+        # Nombre original sin .enc
+        filename = os.path.basename(real_path).replace(".enc", "")
+        media_type = "application/pdf" if filename.endswith(".pdf") else "application/octet-stream"
+        return Response(content=datos, media_type=media_type,
+                        headers={"Content-Disposition": f"inline; filename={filename}"})
+
     filename = os.path.basename(real_path)
     media_type = "application/pdf" if filename.endswith(".pdf") else "application/octet-stream"
     return FileResponse(path=real_path, filename=filename, media_type=media_type)
@@ -1097,6 +1264,169 @@ async def historial_radicado(nro_radicado: str, user_info: dict = Depends(obtene
         cur.close(); conn.close()
 
 
+FLUJO_MAP = {
+    "RAD": {
+        "archivo": "radicacion-entrada.bpmn",
+        "pasos": ["inicio", "ventanillaRadica", "asignarDependencia", "dependenciaRevisa", "elaborarRespuesta", "notificarCiudadano", "finProceso"],
+        "estados": {
+            "Radicado":   {"actual": "asignarDependencia",  "completados": ["inicio", "ventanillaRadica"]},
+            "Asignado":   {"actual": "dependenciaRevisa",   "completados": ["inicio", "ventanillaRadica", "asignarDependencia"]},
+            "En trámite": {"actual": "dependenciaRevisa",   "completados": ["inicio", "ventanillaRadica", "asignarDependencia"]},
+            "Respondido": {"actual": "notificarCiudadano",  "completados": ["inicio", "ventanillaRadica", "asignarDependencia", "dependenciaRevisa", "elaborarRespuesta"]},
+            "Archivado":  {"actual": "finProceso",          "completados": ["inicio", "ventanillaRadica", "asignarDependencia", "dependenciaRevisa", "elaborarRespuesta", "notificarCiudadano", "finProceso"]},
+        }
+    },
+    "ENV": {
+        "archivo": "radicacion-salida.bpmn",
+        "pasos": ["inicio", "jefeAprueba", "ventanillaRadica", "enviarCorreo", "enviarFisico", "archivar", "fin"],
+        "estados": {
+            "Radicado":   {"actual": "ventanillaRadica",  "completados": ["inicio", "jefeAprueba"]},
+            "En trámite": {"actual": "enviarCorreo",      "completados": ["inicio", "jefeAprueba", "ventanillaRadica"]},
+            "Respondido": {"actual": "archivar",          "completados": ["inicio", "jefeAprueba", "ventanillaRadica", "enviarCorreo", "enviarFisico"]},
+            "Archivado":  {"actual": "fin",               "completados": ["inicio", "jefeAprueba", "ventanillaRadica", "enviarCorreo", "enviarFisico", "archivar", "fin"]},
+        }
+    },
+    "INV": {
+        "archivo": "comunicacion-interna.bpmn",
+        "pasos": ["inicio", "jefeAprueba", "radicarInterno", "notificarDestinatario", "ejecutarAccion", "archivar", "fin"],
+        "estados": {
+            "Radicado":   {"actual": "notificarDestinatario", "completados": ["inicio", "jefeAprueba", "radicarInterno"]},
+            "En trámite": {"actual": "ejecutarAccion",        "completados": ["inicio", "jefeAprueba", "radicarInterno", "notificarDestinatario"]},
+            "Respondido": {"actual": "archivar",              "completados": ["inicio", "jefeAprueba", "radicarInterno", "notificarDestinatario", "ejecutarAccion"]},
+            "Archivado":  {"actual": "fin",                   "completados": ["inicio", "jefeAprueba", "radicarInterno", "notificarDestinatario", "ejecutarAccion", "archivar", "fin"]},
+        }
+    },
+}
+
+@app.post("/workflows/start")
+async def iniciar_workflow(nro_radicado: str = Form(...), admin_info: dict = Depends(obtener_admin_actual)):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT nro_radicado, tipo_radicado, estado FROM radicados WHERE nro_radicado = ?", (nro_radicado,))
+        rad = cur.fetchone()
+        if not rad:
+            raise HTTPException(status_code=404, detail="Radicado no encontrado")
+
+        nro_prefijo = nro_radicado.split("-")[0] if "-" in nro_radicado else "RAD"
+        flujo_config = FLUJO_MAP.get(nro_prefijo, FLUJO_MAP["RAD"])
+        estado = rad["estado"] or "Radicado"
+        estado_config = flujo_config["estados"].get(estado, flujo_config["estados"]["Radicado"])
+
+        cur.execute("""
+            INSERT OR REPLACE INTO workflow_instances (nro_radicado, tipo_flujo, paso_actual, pasos_completados, estado, iniciado_por)
+            VALUES (?, ?, ?, ?, 'activo', ?)
+        """, (nro_radicado, nro_prefijo, estado_config["actual"], json.dumps(estado_config["completados"]), admin_info["id"]))
+        conn.commit()
+        return {"status": "ok", "nro_radicado": nro_radicado, "paso_actual": estado_config["actual"]}
+    finally:
+        conn.close()
+
+
+@app.post("/workflows/{nro_radicado}/complete-task")
+async def completar_tarea(nro_radicado: str, user_info: dict = Depends(obtener_usuario_actual)):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM workflow_instances WHERE nro_radicado = ?", (nro_radicado,))
+        wf = cur.fetchone()
+        if not wf:
+            raise HTTPException(status_code=404, detail="Instancia de workflow no encontrada")
+
+        nro_prefijo = nro_radicado.split("-")[0] if "-" in nro_radicado else "RAD"
+        flujo_config = FLUJO_MAP.get(nro_prefijo, FLUJO_MAP["RAD"])
+        pasos = flujo_config["pasos"]
+        completados = json.loads(wf["pasos_completados"])
+        paso_actual = wf["paso_actual"]
+
+        if paso_actual == "fin":
+            return {"status": "completado", "mensaje": "El flujo ya está finalizado"}
+
+        if paso_actual not in completados:
+            completados.append(paso_actual)
+
+        idx_actual = pasos.index(paso_actual) if paso_actual in pasos else -1
+        siguiente = pasos[idx_actual + 1] if idx_actual + 1 < len(pasos) else "fin"
+
+        # Mapear siguiente paso a estado del radicado
+        estados_map = {"fin": "Archivado", "archivar": "Archivado",
+                       "notificarCiudadano": "Respondido", "elaborarRespuesta": "Respondido",
+                       "enviarCorreo": "Respondido", "enviarFisico": "Respondido",
+                       "asignarDependencia": "Asignado", "revisionDependencia": "En trámite",
+                       "ejecutarAccion": "En trámite", "notificarDestinatario": "En trámite"}
+        nuevo_estado = estados_map.get(siguiente, "En trámite")
+
+        cur.execute("""
+            UPDATE workflow_instances SET paso_actual = ?, pasos_completados = ?,
+            fecha_actualizacion = CURRENT_TIMESTAMP WHERE nro_radicado = ?
+        """, (siguiente, json.dumps(completados), nro_radicado))
+        cur.execute("UPDATE radicados SET estado = ? WHERE nro_radicado = ?", (nuevo_estado, nro_radicado))
+        conn.commit()
+        return {"status": "ok", "paso_anterior": paso_actual, "paso_actual": siguiente, "estado_radicado": nuevo_estado}
+    finally:
+        conn.close()
+
+
+@app.get("/workflows/{nro_radicado}/state")
+async def estado_workflow(nro_radicado: str, user_info: dict = Depends(obtener_usuario_actual)):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM workflow_instances WHERE nro_radicado = ?", (nro_radicado,))
+        wf = cur.fetchone()
+        if not wf:
+            raise HTTPException(status_code=404, detail="Instancia de workflow no encontrada. Inicie el flujo primero.")
+        nro_prefijo = nro_radicado.split("-")[0] if "-" in nro_radicado else "RAD"
+        flujo_config = FLUJO_MAP.get(nro_prefijo, FLUJO_MAP["RAD"])
+        return {
+            "nro_radicado": nro_radicado,
+            "tipo_flujo": wf["tipo_flujo"],
+            "paso_actual": wf["paso_actual"],
+            "pasos_completados": json.loads(wf["pasos_completados"]),
+            "todos_los_pasos": flujo_config["pasos"],
+            "estado": wf["estado"],
+            "fecha_inicio": wf["fecha_inicio"],
+            "fecha_actualizacion": wf["fecha_actualizacion"]
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/radicados/{nro_radicado}/flujo")
+async def endpoint_flujo(nro_radicado: str, user_info: dict = Depends(obtener_usuario_actual)):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT nro_radicado, tipo_radicado, estado FROM radicados WHERE nro_radicado = ?", (nro_radicado,))
+        rad = cur.fetchone()
+        if not rad:
+            raise HTTPException(status_code=404, detail="Radicado no encontrado")
+
+        nro_prefijo = nro_radicado.split("-")[0] if "-" in nro_radicado else "RAD"
+        flujo_config = FLUJO_MAP.get(nro_prefijo, FLUJO_MAP["RAD"])
+
+        # Usar instancia real del workflow si existe
+        cur.execute("SELECT paso_actual, pasos_completados FROM workflow_instances WHERE nro_radicado = ?", (nro_radicado,))
+        wf = cur.fetchone()
+        if wf:
+            paso_actual = wf["paso_actual"]
+            pasos_completados = json.loads(wf["pasos_completados"])
+        else:
+            # Fallback: calcular por estado del radicado
+            estado = rad["estado"] or "Radicado"
+            estado_config = flujo_config["estados"].get(estado, flujo_config["estados"]["Radicado"])
+            paso_actual = estado_config["actual"]
+            pasos_completados = estado_config["completados"]
+
+        return {
+            "nro_radicado": nro_radicado,
+            "estado": rad["estado"],
+            "archivo_bpmn": flujo_config["archivo"],
+            "paso_actual": paso_actual,
+            "pasos_completados": pasos_completados,
+            "todos_los_pasos": flujo_config["pasos"],
+            "tiene_instancia_real": wf is not None
+        }
+    finally:
+        conn.close()
+
+
 @app.get("/mis-notificaciones")
 async def mis_notificaciones(user_info: dict = Depends(obtener_usuario_actual)):
     conn = get_db_connection(); cur = conn.cursor()
@@ -1189,6 +1519,139 @@ async def transferir_a_archivo_central(nro_radicado: str, data: TransferenciaDat
         cur.close(); conn.close()
 
 
+@app.get("/radicados/{nro_radicado}/pdf-info")
+async def info_pdf(nro_radicado: str, user_info: dict = Depends(obtener_usuario_actual)):
+    """Retorna información del PDF (páginas, metadatos) sin descargarlo completo."""
+    from app.core.pdf_utils import obtener_info_pdf
+    from app.core.cifrado_docs import descifrar_archivo
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT path_principal, asunto, serie, subserie, nombre_razon_social FROM radicados WHERE nro_radicado = ?", (nro_radicado,))
+        rad = cur.fetchone()
+        if not rad or not rad["path_principal"]:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+        path = rad["path_principal"]
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Archivo no existe en el servidor")
+        datos = descifrar_archivo(path) if path.endswith(".enc") else open(path, "rb").read()
+        info = obtener_info_pdf(datos)
+        info["nro_radicado"] = nro_radicado
+        info["asunto"] = rad["asunto"]
+        info["serie"] = rad["serie"]
+        info["subserie"] = rad["subserie"]
+        return info
+    finally:
+        conn.close()
+
+
+@app.post("/radicados/{nro_radicado}/dividir-pdf")
+async def dividir_pdf(
+    nro_radicado: str,
+    pagina_inicio: int = Form(1),
+    pagina_fin: int = Form(0),
+    modo: str = Form("rango"),
+    user_info: dict = Depends(obtener_usuario_actual)
+):
+    """
+    Divide el PDF de un radicado.
+    modo='rango': extrae páginas pagina_inicio a pagina_fin
+    modo='todas': retorna info de todas las páginas (no descarga individual)
+    """
+    from app.core.pdf_utils import dividir_pdf_por_rango, obtener_info_pdf
+    from app.core.cifrado_docs import descifrar_archivo, cifrar_bytes
+    from fastapi.responses import Response
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT path_principal, asunto, serie, subserie, nombre_razon_social, nro_radicado
+            FROM radicados WHERE nro_radicado = ?
+        """, (nro_radicado,))
+        rad = cur.fetchone()
+        if not rad or not rad["path_principal"]:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        path = rad["path_principal"]
+        datos = descifrar_archivo(path) if path.endswith(".enc") else open(path, "rb").read()
+
+        meta = {
+            "nro_radicado": nro_radicado,
+            "asunto": rad["asunto"] or "",
+            "serie": rad["serie"] or "",
+            "subserie": rad["subserie"] or "",
+            "nombre_razon_social": rad["nombre_razon_social"] or "",
+        }
+
+        if modo == "todas":
+            info = obtener_info_pdf(datos)
+            return {"nro_radicado": nro_radicado, **info}
+
+        # Modo rango
+        info = obtener_info_pdf(datos)
+        fin = pagina_fin if pagina_fin > 0 else info["num_paginas"]
+        resultado = dividir_pdf_por_rango(datos, pagina_inicio, fin, meta)
+
+        # Guardar fragmento cifrado en storage
+        nombre_fragmento = resultado["nombre"]
+        path_fragmento = f"{UPLOAD_DIR}/{nombre_fragmento}.enc"
+        with open(path_fragmento, "wb") as f:
+            f.write(cifrar_bytes(resultado["bytes"]))
+
+        registrar_evento(user_info['id'], 'DIVIDIR_PDF', 'GESTION',
+                         f"Fragmento p{pagina_inicio}-{fin} de {nro_radicado}", None)
+
+        return Response(
+            content=resultado["bytes"],
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={nombre_fragmento}"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/sla/semaforo/{nro_radicado}")
+async def semaforo_radicado(nro_radicado: str, user_info: dict = Depends(obtener_usuario_actual)):
+    from app.core.dias_habiles import calcular_semaforo
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT fecha_vencimiento, dias_respuesta FROM radicados WHERE nro_radicado = ?", (nro_radicado,))
+        rad = cur.fetchone()
+        if not rad or not rad["fecha_vencimiento"]:
+            return {"color": "gris", "emoji": "⚪", "mensaje": "Sin fecha de vencimiento", "dias_restantes": None, "porcentaje_consumido": 0}
+        from datetime import date
+        fecha_venc = date.fromisoformat(str(rad["fecha_vencimiento"])[:10])
+        dias_totales = rad["dias_respuesta"] or 15
+        return calcular_semaforo(fecha_venc, dias_totales)
+    finally:
+        conn.close()
+
+
+@app.get("/sla/festivos")
+async def festivos_colombia(anio: int = 0, user_info: dict = Depends(obtener_usuario_actual)):
+    from app.core.dias_habiles import festivos_anio
+    from datetime import date
+    anio_consulta = anio if anio > 0 else date.today().year
+    return {"anio": anio_consulta, "festivos": festivos_anio(anio_consulta)}
+
+
+@app.get("/sla/calcular-vencimiento")
+async def calcular_vencimiento(fecha_inicio: str, dias_habiles: int = 15, user_info: dict = Depends(obtener_usuario_actual)):
+    from app.core.dias_habiles import agregar_dias_habiles
+    from datetime import date
+    try:
+        inicio = date.fromisoformat(fecha_inicio)
+        vencimiento = agregar_dias_habiles(inicio, dias_habiles)
+        return {
+            "fecha_inicio": str(inicio),
+            "dias_habiles": dias_habiles,
+            "fecha_vencimiento": str(vencimiento),
+            "nota": "Calculado con festivos colombianos incluidos"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/archivo-central")
 async def consultar_archivo_central(
     q: str = "", anio: int = 0, serie: str = "", caja: str = "",
@@ -1220,3 +1683,246 @@ async def consultar_archivo_central(
         return [dict(r) for r in cur.fetchall()]
     finally:
         cur.close(); conn.close()
+
+
+# =====================================================================
+# T4.5.1 / T4.5.2 — Facturas Electrónicas DIAN UBL 2.1
+# =====================================================================
+
+@app.post("/facturas/parsear-xml")
+async def parsear_xml_dian(
+    archivo: UploadFile = File(...),
+    user_info: dict = Depends(obtener_usuario_actual)
+):
+    """
+    T4.5.1 — Recibe un archivo XML de factura DIAN y retorna los datos parseados.
+    No guarda nada en BD. Sirve como preview antes de radicar.
+    """
+    from app.core.dian_parser import parsear_factura_dian, validar_xml_dian
+
+    contenido = await archivo.read()
+
+    # Validar que sea XML y tenga estructura DIAN
+    validacion = validar_xml_dian(contenido)
+
+    # Intentar parsear (incluso con advertencias)
+    try:
+        datos = parsear_factura_dian(contenido)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al procesar el XML: {str(e)}")
+
+    registrar_evento(
+        user_info['id'], 'PARSEAR_XML_DIAN', 'FACTURAS',
+        f"XML parseado: {datos.get('nro_factura','?')} — {datos.get('nombre_proveedor','?')}",
+        None
+    )
+
+    return {
+        "validacion": validacion,
+        "datos": datos
+    }
+
+
+@app.post("/facturas/radicar-dian")
+async def radicar_factura_dian(
+    archivo: UploadFile = File(...),
+    user_info: dict = Depends(obtener_usuario_actual)
+):
+    """
+    T4.5.2 — Parsea el XML DIAN, guarda en facturas_dian y crea radicado automático.
+    Retorna el nro_radicado generado.
+    """
+    from app.core.dian_parser import parsear_factura_dian, validar_xml_dian
+    from app.core.cifrado_docs import cifrar_bytes
+    from app.core.dias_habiles import agregar_dias_habiles
+    from datetime import date
+
+    contenido = await archivo.read()
+
+    validacion = validar_xml_dian(contenido)
+    if not validacion["valido"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"XML DIAN inválido: {'; '.join(validacion['errores'])}"
+        )
+
+    try:
+        datos = parsear_factura_dian(contenido)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        # Verificar si ya existe la factura (por nro_factura o CUFE)
+        cur.execute(
+            "SELECT id, nro_radicado FROM facturas_dian WHERE nro_factura = ? OR (cufe != '' AND cufe = ?)",
+            (datos["nro_factura"], datos["cufe"] or "")
+        )
+        existente = cur.fetchone()
+        if existente:
+            raise HTTPException(
+                status_code=409,
+                detail=f"La factura {datos['nro_factura']} ya fue registrada. "
+                       f"Radicado: {existente['nro_radicado'] or 'sin radicado'}"
+            )
+
+        # --- Guardar XML cifrado en storage ---
+        nombre_xml = f"DIAN_{datos['nro_factura'].replace('/', '-')}_{datos['nit_proveedor']}.xml.enc"
+        path_xml = f"{UPLOAD_DIR}/{nombre_xml}"
+        with open(path_xml, "wb") as f:
+            f.write(cifrar_bytes(contenido))
+
+        # --- Generar número de radicado (tipo ENTRADA) ---
+        prefijo = "RE"
+        anio = date.today().year
+        cur.execute(
+            "INSERT INTO secuencia_radicados (prefijo, anio, ultimo_numero) VALUES (?, ?, 1) "
+            "ON CONFLICT(prefijo, anio) DO UPDATE SET ultimo_numero = ultimo_numero + 1",
+            (prefijo, anio)
+        )
+        cur.execute("SELECT ultimo_numero FROM secuencia_radicados WHERE prefijo=? AND anio=?", (prefijo, anio))
+        seq = cur.fetchone()["ultimo_numero"]
+        nro_radicado = f"{prefijo}-{anio}-{seq:05d}"
+
+        # --- Fecha de vencimiento (15 días hábiles) ---
+        try:
+            fecha_emision = date.fromisoformat(datos["fecha_emision"]) if datos["fecha_emision"] else date.today()
+        except Exception:
+            fecha_emision = date.today()
+        fecha_vencimiento = agregar_dias_habiles(fecha_emision, 15)
+
+        # --- Insertar radicado automático ---
+        cur.execute("""
+            INSERT INTO radicados (
+                nro_radicado, tipo_radicado, tipo_remitente,
+                nombre_razon_social, nro_documento,
+                correo_electronico, telefono, direccion, ciudad,
+                serie, subserie, tipo_documental,
+                asunto, metodo_recepcion,
+                dias_respuesta, fecha_vencimiento,
+                path_principal, creado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            nro_radicado, "Entrada", "Jurídica",
+            datos["nombre_proveedor"], datos["nit_proveedor"],
+            datos["correo_proveedor"], datos["telefono_proveedor"],
+            datos["direccion_proveedor"], datos["ciudad_proveedor"],
+            datos["serie_sugerida"], datos["subserie_sugerida"], "Factura Electrónica",
+            datos["asunto_radicacion"], "Digital (DIAN)",
+            15, str(fecha_vencimiento),
+            path_xml, user_info["id"]
+        ))
+
+        # --- Insertar en facturas_dian ---
+        cur.execute("""
+            INSERT INTO facturas_dian (
+                nro_radicado, tipo_documento, nro_factura, cufe,
+                fecha_emision, nit_proveedor, nombre_proveedor,
+                correo_proveedor, telefono_proveedor, direccion_proveedor, ciudad_proveedor,
+                nit_receptor, nombre_receptor,
+                valor_bruto, descuentos, iva, valor_a_pagar,
+                moneda, forma_pago, fecha_vence_pago,
+                items_json, path_xml, radicado_automatico, estado, creado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'radicada', ?)
+        """, (
+            nro_radicado, datos["tipo_documento"], datos["nro_factura"], datos["cufe"],
+            datos["fecha_emision"], datos["nit_proveedor"], datos["nombre_proveedor"],
+            datos["correo_proveedor"], datos["telefono_proveedor"],
+            datos["direccion_proveedor"], datos["ciudad_proveedor"],
+            datos["nit_receptor"], datos["nombre_receptor"],
+            datos["valor_bruto"], datos["descuentos"], datos["iva"], datos["valor_a_pagar"],
+            datos["moneda"], datos["forma_pago"], datos["fecha_vence_pago"],
+            json.dumps(datos["items"], ensure_ascii=False),
+            path_xml, user_info["id"]
+        ))
+
+        conn.commit()
+
+        registrar_evento(
+            user_info['id'], 'RADICAR_FACTURA_DIAN', 'FACTURAS',
+            f"Radicación automática: {nro_radicado} — Factura {datos['nro_factura']} de {datos['nombre_proveedor']}",
+            None
+        )
+
+        return {
+            "ok": True,
+            "nro_radicado": nro_radicado,
+            "nro_factura": datos["nro_factura"],
+            "proveedor": datos["nombre_proveedor"],
+            "valor_a_pagar": datos["valor_a_pagar"],
+            "fecha_vencimiento": str(fecha_vencimiento),
+            "mensaje": f"Factura radicada automáticamente como {nro_radicado}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+    finally:
+        conn.close()
+
+
+@app.get("/facturas/dian")
+async def listar_facturas_dian(
+    q: str = "",
+    estado: str = "",
+    page: int = 1,
+    per_page: int = 20,
+    user_info: dict = Depends(obtener_usuario_actual)
+):
+    """Lista las facturas DIAN registradas con filtros y paginación."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        filtros, params = [], []
+        if q:
+            filtros.append("(f.nro_factura LIKE ? OR f.nombre_proveedor LIKE ? OR f.nro_radicado LIKE ? OR f.cufe LIKE ?)")
+            params += [f"%{q}%"] * 4
+        if estado:
+            filtros.append("f.estado = ?"); params.append(estado)
+        where = ("WHERE " + " AND ".join(filtros)) if filtros else ""
+        offset = (page - 1) * per_page
+
+        cur.execute(f"SELECT COUNT(*) as total FROM facturas_dian f {where}", params)
+        total = cur.fetchone()["total"]
+
+        cur.execute(f"""
+            SELECT f.*, u.nombre_completo AS registrado_por_nombre
+            FROM facturas_dian f
+            LEFT JOIN usuarios u ON f.creado_por = u.id
+            {where}
+            ORDER BY f.fecha_registro DESC
+            LIMIT ? OFFSET ?
+        """, params + [per_page, offset])
+
+        return {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": max(1, -(-total // per_page)),
+            "facturas": [dict(r) for r in cur.fetchall()]
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/facturas/dian/{id}")
+async def detalle_factura_dian(id: int, user_info: dict = Depends(obtener_usuario_actual)):
+    """Retorna el detalle completo de una factura DIAN incluyendo sus ítems."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM facturas_dian WHERE id = ?", (id,))
+        f = cur.fetchone()
+        if not f:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        result = dict(f)
+        if result.get("items_json"):
+            try:
+                result["items"] = json.loads(result["items_json"])
+            except Exception:
+                result["items"] = []
+        return result
+    finally:
+        conn.close()
