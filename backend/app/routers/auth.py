@@ -68,7 +68,7 @@ async def login(
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, password_hash, rol_id FROM usuarios WHERE usuario = ? AND activo = TRUE", (usuario,))
+    cur.execute("SELECT id, password_hash, rol_id FROM usuarios WHERE usuario = ? AND activo = 1", (usuario,))
     user = cur.fetchone()
 
     if not user or not verificar_password(password, user['password_hash']):
