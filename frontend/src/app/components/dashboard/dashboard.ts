@@ -111,6 +111,8 @@ anexosBinarios: File[] = [];
     switch(label) {
       case 'Dashboard':
         this.seccionActiva = 'dashboard';
+        // Re-inicializar gráficas: *ngIf recrea los canvas al volver al dashboard
+        setTimeout(() => this.cargarGraficas(), 100);
         break;
 
       case 'Configuración':
