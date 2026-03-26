@@ -32,17 +32,26 @@ app.include_router(archivo.router)
 def debug_db():
     import os
     db_url = os.getenv("DATABASE_URL", "")
-    try:
-        import psycopg2
-        pg_ok = True
-    except Exception as e:
-        pg_ok = str(e)
-    return {
+    result = {
         "DATABASE_URL_set": bool(db_url),
-        "DATABASE_URL_preview": db_url[:30] if db_url else None,
-        "psycopg2_available": pg_ok,
+        "DATABASE_URL_preview": db_url[:40] if db_url else None,
         "WEBSITE_HOSTNAME": os.getenv("WEBSITE_HOSTNAME"),
+        "connection_test": None,
+        "connection_error": None,
+        "usuarios_count": None,
     }
+    try:
+        from app.core.database import get_db_connection
+        conn = get_db_connection()
+        result["connection_test"] = type(conn).__name__
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) as total FROM usuarios")
+        row = cur.fetchone()
+        result["usuarios_count"] = dict(row)["total"] if row else 0
+        conn.close()
+    except Exception as e:
+        result["connection_error"] = str(e)
+    return result
 
 
 @app.get("/")
