@@ -254,9 +254,11 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
         _inicio_mes = date.today().replace(day=1).isoformat()
 
         # --- Volumen de radicación ---
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = ?", (_hoy,))
+        _hoy_siguiente = (date.today() + _td(days=1)).isoformat()
+        _ayer_siguiente = date.today().isoformat()
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_hoy, _hoy_siguiente))
         hoy = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE DATE(fecha_radicacion) = ?", (_ayer,))
+        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_ayer, _ayer_siguiente))
         ayer = cur.fetchone()[0]
         variacion = round(((hoy - ayer) / ayer * 100), 1) if ayer > 0 else 0
 
@@ -371,9 +373,10 @@ async def obtener_stats_graficas(admin_info: dict = Depends(obtener_admin_actual
         for tipo in tipos:
             serie = []
             for d in dias:
+                d_next = (d + timedelta(days=1)).isoformat()
                 cur.execute(
-                    "SELECT COUNT(*) FROM radicados WHERE tipo_radicado = ? AND DATE(fecha_radicacion) = ?",
-                    (tipo, d.isoformat())
+                    "SELECT COUNT(*) FROM radicados WHERE tipo_radicado = ? AND fecha_radicacion >= ? AND fecha_radicacion < ?",
+                    (tipo, d.isoformat(), d_next)
                 )
                 serie.append(cur.fetchone()[0])
             series_barras[tipo] = serie
