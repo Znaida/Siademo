@@ -267,6 +267,29 @@ def inicializar_db():
             fecha_transferencia TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             transferido_por INTEGER
         )""",
+        # T4.5.1 — Metadatos de facturas electrónicas DIAN
+        """CREATE TABLE IF NOT EXISTS facturas_dian (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nro_radicado TEXT NOT NULL,
+            tipo_documento TEXT,
+            nro_factura TEXT,
+            cufe TEXT,
+            fecha_emision TEXT,
+            nit_proveedor TEXT,
+            nombre_proveedor TEXT,
+            ciudad_proveedor TEXT,
+            correo_proveedor TEXT,
+            valor_bruto TEXT,
+            descuentos TEXT,
+            iva TEXT,
+            valor_a_pagar TEXT,
+            moneda TEXT DEFAULT 'COP',
+            forma_pago TEXT,
+            fecha_vence_pago TEXT,
+            asunto_radicacion TEXT,
+            estado TEXT DEFAULT 'radicada',
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
     ]
 
     for sql in tablas:

@@ -179,6 +179,27 @@ async def endpoint_historial(
     return historial_radicado(nro_radicado)
 
 
+@router.post("/radicados/dian/parsear")
+async def parsear_xml_dian(
+    archivo_xml: UploadFile = File(...),
+    user_info: dict = Depends(obtener_usuario_actual)
+):
+    """T4.5.1 — Parsea factura electrónica DIAN (XML UBL 2.1) y retorna datos para pre-llenar el formulario de radicación."""
+    if not archivo_xml.filename.lower().endswith('.xml'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un XML de factura electrónica DIAN")
+
+    contenido = await archivo_xml.read()
+    try:
+        from app.core.dian_parser import parsear_factura_dian, validar_xml_dian
+        validacion = validar_xml_dian(contenido)
+        datos = parsear_factura_dian(contenido)
+        return {"valido": validacion["valido"], "advertencias": validacion["advertencias"], **datos}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el XML: {str(e)}")
+
+
 @router.get("/radicados/{nro_radicado}/flujo")
 async def endpoint_flujo(
     nro_radicado: str,
