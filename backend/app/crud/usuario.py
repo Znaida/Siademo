@@ -3,7 +3,7 @@ CRUD — Usuarios
 Toda la lógica de acceso a BD para usuarios vive aquí.
 """
 from fastapi import HTTPException
-from app.core.database import get_db_connection
+from app.core.database import get_db_connection, is_postgres
 
 
 def crear_usuario(usuario: str, nombre_completo: str, rol_id: int,
@@ -18,7 +18,7 @@ def crear_usuario(usuario: str, nombre_completo: str, rol_id: int,
         cur.execute("""
             INSERT INTO usuarios
                 (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo, debe_cambiar_password)
-            VALUES (?, ?, ?, ?, ?, TRUE, TRUE)
+            VALUES (?, ?, ?, ?, ?, 1, 1)
         """, (usuario, password_hash, nombre_completo, rol_id, secret_2fa))
         conn.commit()
     except HTTPException:
@@ -35,14 +35,15 @@ def listar_usuarios() -> list:
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        agg_fn = "STRING_AGG(e.nombre, ', ')" if is_postgres() else "GROUP_CONCAT(e.nombre, ', ')"
+        cur.execute(f"""
             SELECT u.id, u.usuario, u.nombre_completo, u.rol_id, u.activo,
-                   GROUP_CONCAT(e.nombre, ', ') AS grupos
+                   {agg_fn} AS grupos
             FROM usuarios u
             LEFT JOIN usuario_equipo ue ON u.id = ue.usuario_id
             LEFT JOIN equipos e ON ue.equipo_id = e.id
             WHERE u.rol_id != 0
-            GROUP BY u.id
+            GROUP BY u.id, u.usuario, u.nombre_completo, u.rol_id, u.activo
             ORDER BY u.rol_id, u.nombre_completo
         """)
         return [dict(r) for r in cur.fetchall()]

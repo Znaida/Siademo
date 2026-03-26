@@ -56,6 +56,10 @@ class _PgCursor:
         row = self._cur.fetchone()
         return row["lastval"] if row else None
 
+    @property
+    def rowcount(self):
+        return self._cur.rowcount
+
     def close(self):
         self._cur.close()
 

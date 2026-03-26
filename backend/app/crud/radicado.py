@@ -148,8 +148,8 @@ def listar_radicados(
         where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
 
         # Total de registros (incluir JOIN para que las condiciones con u.nombre_completo funcionen)
-        cur.execute(f"SELECT COUNT(*) FROM radicados r LEFT JOIN usuarios u ON r.funcionario_responsable_id = u.id {where}", params)
-        total = cur.fetchone()[0]
+        cur.execute(f"SELECT COUNT(*) as cnt FROM radicados r LEFT JOIN usuarios u ON r.funcionario_responsable_id = u.id {where}", params)
+        total = cur.fetchone()['cnt']
 
         # Paginación
         offset = (page - 1) * per_page

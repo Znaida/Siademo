@@ -42,10 +42,10 @@ def consultar_logs(
         where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
 
         cur.execute(
-            f"SELECT COUNT(*) FROM auditoria a LEFT JOIN usuarios u ON a.usuario_id = u.id {where}",
+            f"SELECT COUNT(*) as cnt FROM auditoria a LEFT JOIN usuarios u ON a.usuario_id = u.id {where}",
             params
         )
-        total = cur.fetchone()[0]
+        total = cur.fetchone()['cnt']
 
         offset = (page - 1) * per_page
         cur.execute(f"""

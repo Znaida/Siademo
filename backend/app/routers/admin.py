@@ -256,49 +256,49 @@ async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)
         # --- Volumen de radicación ---
         _hoy_siguiente = (date.today() + _td(days=1)).isoformat()
         _ayer_siguiente = date.today().isoformat()
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_hoy, _hoy_siguiente))
-        hoy = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_ayer, _ayer_siguiente))
-        ayer = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_hoy, _hoy_siguiente))
+        hoy = cur.fetchone()['cnt']
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE fecha_radicacion >= ? AND fecha_radicacion < ?", (_ayer, _ayer_siguiente))
+        ayer = cur.fetchone()['cnt']
         variacion = round(((hoy - ayer) / ayer * 100), 1) if ayer > 0 else 0
 
         # --- Cumplimiento ANS ---
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado NOT IN ('Archivado','En Archivo Central')")
-        activos = cur.fetchone()[0]
-        cur.execute("""SELECT COUNT(*) FROM radicados
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE estado NOT IN ('Archivado','En Archivo Central')")
+        activos = cur.fetchone()['cnt']
+        cur.execute("""SELECT COUNT(*) as cnt FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
                        AND (fecha_vencimiento IS NULL OR fecha_vencimiento >= ?)""", (_hoy,))
-        dentro_plazo = cur.fetchone()[0]
+        dentro_plazo = cur.fetchone()['cnt']
         pct_ans = round((dentro_plazo / activos * 100), 1) if activos > 0 else 100.0
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE fecha_vencimiento = ?", (_hoy,))
-        vencen_hoy = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE fecha_vencimiento = ?", (_hoy,))
+        vencen_hoy = cur.fetchone()['cnt']
 
         # --- Eficiencia operativa ---
-        cur.execute("SELECT COUNT(*) FROM radicados")
-        total = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado IN ('Archivado','En Archivo Central')")
-        completados = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados")
+        total = cur.fetchone()['cnt']
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE estado IN ('Archivado','En Archivo Central')")
+        completados = cur.fetchone()['cnt']
         pct_eficiencia = round((completados / total * 100), 1) if total > 0 else 0.0
-        cur.execute("SELECT COUNT(*) FROM radicados WHERE estado = 'En Trámite'")
-        en_tramite = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM radicados WHERE estado = 'En Trámite'")
+        en_tramite = cur.fetchone()['cnt']
 
         # --- Archivo digital ---
-        cur.execute("SELECT COUNT(*) FROM archivo_central")
-        archivados = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM archivo_central WHERE fecha_transferencia >= ?", (_inicio_mes,))
-        archivados_mes = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM archivo_central")
+        archivados = cur.fetchone()['cnt']
+        cur.execute("SELECT COUNT(*) as cnt FROM archivo_central WHERE fecha_transferencia >= ?", (_inicio_mes,))
+        archivados_mes = cur.fetchone()['cnt']
         pct_archivo_mes = round((archivados_mes / archivados * 100), 1) if archivados > 0 else 0.0
 
         # --- ANS breakdown (cumplimiento / en riesgo / incumplimiento) ---
-        cur.execute("""SELECT COUNT(*) FROM radicados
+        cur.execute("""SELECT COUNT(*) as cnt FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
                        AND fecha_vencimiento IS NOT NULL
                        AND fecha_vencimiento < ?""", (_hoy,))
-        vencidos = cur.fetchone()[0]
-        cur.execute("""SELECT COUNT(*) FROM radicados
+        vencidos = cur.fetchone()['cnt']
+        cur.execute("""SELECT COUNT(*) as cnt FROM radicados
                        WHERE estado NOT IN ('Archivado','En Archivo Central')
                        AND fecha_vencimiento BETWEEN ? AND ?""", (_hoy, _tres_dias))
-        en_riesgo = cur.fetchone()[0]
+        en_riesgo = cur.fetchone()['cnt']
         a_tiempo = max(0, activos - vencidos - en_riesgo)
         pct_cumplimiento  = round(a_tiempo  / activos * 100, 1) if activos > 0 else 100.0
         pct_en_riesgo     = round(en_riesgo / activos * 100, 1) if activos > 0 else 0.0
@@ -375,10 +375,10 @@ async def obtener_stats_graficas(admin_info: dict = Depends(obtener_admin_actual
             for d in dias:
                 d_next = (d + timedelta(days=1)).isoformat()
                 cur.execute(
-                    "SELECT COUNT(*) FROM radicados WHERE tipo_radicado = ? AND fecha_radicacion >= ? AND fecha_radicacion < ?",
+                    "SELECT COUNT(*) as cnt FROM radicados WHERE tipo_radicado = ? AND fecha_radicacion >= ? AND fecha_radicacion < ?",
                     (tipo, d.isoformat(), d_next)
                 )
-                serie.append(cur.fetchone()[0])
+                serie.append(cur.fetchone()['cnt'])
             series_barras[tipo] = serie
 
         # --- Dona: distribución actual por estado ---
@@ -449,10 +449,10 @@ async def obtener_stats_informes(
         for m in meses:
             siguiente = date(m.year + (1 if m.month == 12 else 0), (m.month % 12) + 1, 1)
             cur.execute(
-                f"SELECT COUNT(*) FROM radicados {where} {'AND' if where else 'WHERE'} fecha_radicacion >= ? AND fecha_radicacion < ?",
+                f"SELECT COUNT(*) as cnt FROM radicados {where} {'AND' if where else 'WHERE'} fecha_radicacion >= ? AND fecha_radicacion < ?",
                 params_base + [m.isoformat(), siguiente.isoformat()]
             )
-            tendencia_values.append(cur.fetchone()[0])
+            tendencia_values.append(cur.fetchone()['cnt'])
 
         # --- Por tipo ---
         cur.execute(f"SELECT tipo_radicado, COUNT(*) as cnt FROM radicados {where} GROUP BY tipo_radicado ORDER BY cnt DESC", params_base)

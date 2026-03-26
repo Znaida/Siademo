@@ -78,7 +78,7 @@ def generar_consecutivo(prefijo: str) -> str:
                 "SELECT ultimo_numero FROM secuencia_radicados WHERE prefijo = ? AND anio = ?",
                 (prefijo, anio_actual)
             )
-            nuevo_valor = cur.fetchone()[0]
+            nuevo_valor = cur.fetchone()['ultimo_numero']
         conn.commit()
         return f"{prefijo}-{anio_actual}-{nuevo_valor:05d}"
     except Exception as e:
