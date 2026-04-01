@@ -86,9 +86,73 @@
               style="margin-top: 1.5rem; background: none; border: none; color: #2563eb; font-weight: 800; font-size: 0.75rem; cursor: pointer; text-transform: uppercase;">
         ← Volver al inicio
       </button>
+
+      <!-- Link olvidé contraseña -->
+      <div *ngIf="!paso2 && !modoReset" style="text-align:center; margin-top:1.2rem;">
+        <button type="button" (click)="abrirReset()"
+                style="background:none; border:none; color:#94a3b8; font-size:0.72rem; font-weight:600; cursor:pointer; text-decoration:underline;">
+          ¿Olvidaste tu contraseña?
+        </button>
+      </div>
     </form>
 
-    <div class="footer-info" style="margin-top: 3rem; font-size: 0.65rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em;">
+    <!-- ===== PANEL RECUPERACIÓN DE CONTRASEÑA ===== -->
+    <div *ngIf="modoReset" style="margin-top:0.5rem;">
+
+      <!-- Éxito -->
+      <div *ngIf="resetExitoso" style="text-align:center; padding:1.5rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">✅</div>
+        <p style="font-weight:800; color:#16a34a; margin-bottom:0.5rem;">¡Contraseña restablecida!</p>
+        <p style="font-size:0.8rem; color:#64748b; margin-bottom:1.5rem;">Ya puedes iniciar sesión con tu nueva contraseña.</p>
+        <button (click)="volverLogin()"
+                style="background:#2563eb; color:#fff; border:none; padding:0.75rem 2rem; border-radius:1rem; font-weight:800; cursor:pointer;">
+          Ir al login
+        </button>
+      </div>
+
+      <!-- Formulario reset -->
+      <form *ngIf="!resetExitoso" (ngSubmit)="enviarReset($event)">
+        <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:0.75rem 1rem; border-radius:0.75rem; margin-bottom:1.5rem;">
+          <p style="margin:0; font-size:0.75rem; color:#92400e; font-weight:700;">
+            💡 Solicita a tu administrador el token de recuperación. Te lo entregará directamente.
+          </p>
+        </div>
+
+        <div class="input-group">
+          <label>Token de recuperación</label>
+          <input type="text" [(ngModel)]="resetData.token" name="token"
+                 placeholder="Pega aquí el token recibido" required
+                 style="font-family:monospace; font-size:0.8rem;">
+        </div>
+
+        <div class="input-group">
+          <label>Nueva contraseña</label>
+          <input type="password" [(ngModel)]="resetData.password_nuevo" name="pwd_nuevo"
+                 placeholder="Mínimo 8 caracteres" required>
+        </div>
+
+        <div class="input-group">
+          <label>Confirmar contraseña</label>
+          <input type="password" [(ngModel)]="resetData.password_confirmar" name="pwd_confirmar"
+                 placeholder="Repite la contraseña" required>
+        </div>
+
+        <div *ngIf="resetError" style="background:#fef2f2; color:#dc2626; padding:0.75rem; border-radius:0.75rem; font-size:0.8rem; font-weight:600; margin-bottom:1rem;">
+          ⚠️ {{ resetError }}
+        </div>
+
+        <button type="submit" class="login-btn" [disabled]="cargando">
+          {{ cargando ? 'Restableciendo...' : '🔑 Restablecer contraseña' }}
+        </button>
+
+        <button type="button" (click)="volverLogin()"
+                style="display:block; width:100%; margin-top:1rem; background:none; border:none; color:#64748b; font-size:0.75rem; font-weight:700; cursor:pointer; text-transform:uppercase;">
+          ← Volver al login
+        </button>
+      </form>
+    </div>
+
+    <div class="footer-info" style="margin-top:3rem; font-size:0.65rem; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.1em;">
       Acceso exclusivo para personal autorizado de KronosZnd
     </div>
   </div>

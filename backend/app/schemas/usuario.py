@@ -19,8 +19,8 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def password_minimo(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("La contraseña debe tener al menos 6 caracteres")
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
         return v
 
     @field_validator("rol_id")
@@ -61,8 +61,8 @@ class CambiarPasswordData(BaseModel):
     @field_validator("password_nuevo")
     @classmethod
     def password_minimo(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("La contraseña debe tener al menos 6 caracteres")
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
         if v.isdigit():
             raise ValueError("La contraseña no puede ser solo números")
         if v.isalpha():

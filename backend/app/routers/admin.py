@@ -554,5 +554,138 @@ async def exportar_audit_logs(
     return StreamingResponse(
         iter([csv_content]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+# ── T8.2 / T8.3 — Editor BPMN: CRUD de plantillas de flujo ──────────────────
+
+TIPOS_FLUJO = ["entrada", "salida", "interna", "archivo"]
+
+@router.get("/workflows")
+async def listar_workflows(admin_info: dict = Depends(obtener_admin_actual)):
+    """Lista todas las plantillas BPMN guardadas."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, nombre, descripcion, tipo, version, activo, es_default, creado_en, modificado_en
+            FROM workflow_templates ORDER BY tipo, version DESC
+        """)
+        rows = cur.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/workflows/{workflow_id}")
+async def obtener_workflow(workflow_id: int, admin_info: dict = Depends(obtener_admin_actual)):
+    """Obtiene una plantilla BPMN con su XML completo."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM workflow_templates WHERE id = ?", (workflow_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+        return dict(row)
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.post("/workflows")
+async def crear_workflow(
+    request: Request,
+    admin_info: dict = Depends(obtener_admin_actual)
+):
+    """Crea una nueva plantilla BPMN."""
+    body = await request.json()
+    nombre = body.get("nombre", "").strip()
+    tipo = body.get("tipo", "").strip()
+    xml_content = body.get("xml_content", "").strip()
+    descripcion = body.get("descripcion", "").strip()
+
+    if not nombre or not tipo or not xml_content:
+        raise HTTPException(status_code=400, detail="nombre, tipo y xml_content son requeridos")
+    if tipo not in TIPOS_FLUJO:
+        raise HTTPException(status_code=400, detail=f"tipo debe ser uno de: {TIPOS_FLUJO}")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO workflow_templates (nombre, descripcion, tipo, xml_content, creado_por)
+            VALUES (?, ?, ?, ?, ?)
+        """, (nombre, descripcion, tipo, xml_content, admin_info['id']))
+        conn.commit()
+        new_id = cur.lastrowid
+        registrar_evento(admin_info['id'], 'CREATE_WORKFLOW', 'ADMIN', f"Plantilla: {nombre}", request)
+        return {"id": new_id, "mensaje": "Plantilla creada exitosamente"}
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/workflows/{workflow_id}")
+async def actualizar_workflow(
+    workflow_id: int,
+    request: Request,
+    admin_info: dict = Depends(obtener_admin_actual)
+):
+    """Actualiza el XML y metadatos de una plantilla existente."""
+    body = await request.json()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, version FROM workflow_templates WHERE id = ?", (workflow_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+        nueva_version = row['version'] + 1
+        campos = []
+        valores = []
+        for campo in ['nombre', 'descripcion', 'xml_content', 'activo']:
+            if campo in body:
+                campos.append(f"{campo} = ?")
+                valores.append(body[campo])
+
+        campos.append("version = ?")
+        valores.append(nueva_version)
+        campos.append("modificado_en = CURRENT_TIMESTAMP")
+        valores.append(workflow_id)
+
+        cur.execute(f"UPDATE workflow_templates SET {', '.join(campos)} WHERE id = ?", valores)
+        conn.commit()
+        registrar_evento(admin_info['id'], 'UPDATE_WORKFLOW', 'ADMIN', f"ID {workflow_id} v{nueva_version}", request)
+        return {"mensaje": "Plantilla actualizada", "version": nueva_version}
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.delete("/workflows/{workflow_id}")
+async def eliminar_workflow(
+    workflow_id: int,
+    request: Request,
+    admin_info: dict = Depends(obtener_admin_actual)
+):
+    """Elimina una plantilla (solo si no es default)."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT es_default, nombre FROM workflow_templates WHERE id = ?", (workflow_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+        if row['es_default']:
+            raise HTTPException(status_code=403, detail="No se pueden eliminar las plantillas predeterminadas")
+        cur.execute("DELETE FROM workflow_templates WHERE id = ?", (workflow_id,))
+        conn.commit()
+        registrar_evento(admin_info['id'], 'DELETE_WORKFLOW', 'ADMIN', f"Eliminada: {row['nombre']}", request)
+        return {"mensaje": "Plantilla eliminada"}
+    finally:
+        cur.close()
+        conn.close()

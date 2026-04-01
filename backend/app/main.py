@@ -29,34 +29,6 @@ app.include_router(archivo.router)
 app.include_router(facturas.router)
 
 
-@app.get("/debug-db")
-def debug_db():
-    import os
-    db_url = os.getenv("DATABASE_URL", "")
-    from app.core.database import _PSYCOPG2, is_postgres
-    result = {
-        "DATABASE_URL_set": bool(db_url),
-        "DATABASE_URL_preview": db_url[:40] if db_url else None,
-        "WEBSITE_HOSTNAME": os.getenv("WEBSITE_HOSTNAME"),
-        "_PSYCOPG2_at_startup": _PSYCOPG2,
-        "is_postgres": is_postgres(),
-        "connection_test": None,
-        "connection_error": None,
-        "usuarios_count": None,
-    }
-    try:
-        from app.core.database import get_db_connection
-        conn = get_db_connection()
-        result["connection_test"] = type(conn).__name__
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) as total FROM usuarios")
-        row = cur.fetchone()
-        result["usuarios_count"] = dict(row)["total"] if row else 0
-        conn.close()
-    except Exception as e:
-        result["connection_error"] = str(e)
-    return result
-
 
 @app.get("/")
 def root():

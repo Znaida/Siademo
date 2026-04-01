@@ -125,6 +125,31 @@ def get_db_connection():
     return conn
 
 
+# ── T8.5: Seed plantillas BPMN prediseñadas ───────────────────────────────────
+
+def _seed_workflow_templates(cur):
+    """Inserta las 4 plantillas BPMN predeterminadas en workflow_templates."""
+    import os
+    bpmn_dir = os.path.join(os.path.dirname(__file__), '..', 'bpmn')
+    plantillas = [
+        ('Comunicaciones Recibidas', 'Radicación de documentos recibidos de ciudadanos y entidades', 'entrada', 'radicacion-entrada.bpmn'),
+        ('Comunicaciones Enviadas', 'Radicación de documentos generados y enviados por la entidad', 'salida', 'radicacion-salida.bpmn'),
+        ('Comunicaciones Internas', 'Memorandos y circulares entre dependencias', 'interna', 'comunicacion-interna.bpmn'),
+        ('Transferencia Archivo Central', 'Transferencia documental primaria al Archivo Central', 'archivo', 'transferencia-archivo.bpmn'),
+    ]
+    for nombre, descripcion, tipo, archivo in plantillas:
+        ruta = os.path.join(bpmn_dir, archivo)
+        try:
+            with open(ruta, 'r', encoding='utf-8') as f:
+                xml_content = f.read()
+            cur.execute("""
+                INSERT INTO workflow_templates (nombre, descripcion, tipo, xml_content, es_default, activo)
+                VALUES (?, ?, ?, ?, 1, 1)
+            """, (nombre, descripcion, tipo, xml_content))
+        except Exception as e:
+            print(f"[WARN] No se pudo cargar plantilla {archivo}: {e}")
+
+
 # ── Inicialización del esquema ─────────────────────────────────────────────────
 
 def inicializar_db():
@@ -267,6 +292,29 @@ def inicializar_db():
             fecha_transferencia TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             transferido_por INTEGER
         )""",
+        # T8.2/T8.3 — Plantillas de flujos BPMN editables por el admin
+        """CREATE TABLE IF NOT EXISTS workflow_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            descripcion TEXT,
+            tipo TEXT NOT NULL,
+            xml_content TEXT NOT NULL,
+            version INTEGER DEFAULT 1,
+            activo INTEGER DEFAULT 1,
+            es_default INTEGER DEFAULT 0,
+            creado_por INTEGER,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            modificado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        # Recuperación de contraseña — tokens temporales
+        """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            usado INTEGER DEFAULT 0,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expira_en TIMESTAMP NOT NULL
+        )""",
         # T4.5.1 — Metadatos de facturas electrónicas DIAN
         """CREATE TABLE IF NOT EXISTS facturas_dian (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -295,6 +343,12 @@ def inicializar_db():
     for sql in tablas:
         cur.execute(sql)
     conn.commit()
+
+    # T8.5 — Seed plantillas BPMN prediseñadas (solo si la tabla está vacía)
+    cur.execute("SELECT COUNT(*) as total FROM workflow_templates WHERE es_default = 1")
+    if cur.fetchone()['total'] == 0:
+        _seed_workflow_templates(cur)
+        conn.commit()
 
     # Migraciones: solo necesarias para SQLite (DBs existentes)
     if not pg:

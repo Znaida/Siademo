@@ -137,6 +137,7 @@ anexosBinarios: File[] = [];
 
       case 'Flujos de Trabajo':
         this.seccionActiva = 'flujos';
+        this.flujoTab = 'ver';
         break;
 
       case 'Informes':
@@ -270,6 +271,7 @@ anexosBinarios: File[] = [];
   auditPaginacion = { page: 1, per_page: 50, total: 0, total_pages: 1 };
   mostrarModalTraslado: boolean = false;
   mostrarModalHistorial: boolean = false;
+  flujoTab: 'ver' | 'editar' = 'ver';  // T8.2: tabs del visualizador/editor BPMN
   mostrarModalFlujo: boolean = false;
   cargandoFlujo: boolean = false;
   radicadoFlujoActual: any = null;
@@ -459,7 +461,7 @@ anexosBinarios: File[] = [];
       relacion_jerarquica: this.nuevaDependencia.unidadRelacionada || 'Nivel Raíz'
     };
 
-    console.log("%c--- ENVIANDO ESTRUCTURA A SQL ---", "color: #2563eb; font-weight: bold;");
+    // console.log("%c--- ENVIANDO ESTRUCTURA A SQL ---", "color: #2563eb; font-weight: bold;");
     
     this.http.post(`${this.apiUrl}/admin/registrar-dependencia`, payload)
       .subscribe({
@@ -504,7 +506,7 @@ anexosBinarios: File[] = [];
     this.formSubmitted = true;
     if (!this.validarFormulario()) return;
 
-    console.log("%c--- INICIANDO PROCESO DE RADICACIÓN OFICIAL ---", "color: #2563eb; font-weight: bold;");
+    // console.log("%c--- INICIANDO PROCESO DE RADICACIÓN OFICIAL ---", "color: #2563eb; font-weight: bold;");
 
     // 3. Mapeo de Metadata: De Angular (CamelCase) a Python (SnakeCase)
     const metadata = {
@@ -1442,7 +1444,7 @@ limpiarFormularioRadicacion() {
         nuevo_estado: !user.activo
       };
 
-      console.log(`%c--- SOLICITANDO CAMBIO DE ESTADO (ID: ${user.id}) ---`, "color: #f43f5e; font-weight: bold;");
+      // console.log(`%c--- SOLICITANDO CAMBIO DE ESTADO (ID: ${user.id}) ---`, "color: #f43f5e; font-weight: bold;");
 
       this.http.post(`${this.apiUrl}/admin/cambiar-estado-usuario`, payload)
         .subscribe({
@@ -1455,6 +1457,39 @@ limpiarFormularioRadicacion() {
           }
         });
     }
+  }
+
+  generarTokenReset(user: any) {
+    if (!confirm(`¿Generar token de recuperación de contraseña para ${user.nombre_completo}?`)) return;
+
+    const formData = new FormData();
+    formData.append('usuario', user.usuario);
+
+    this.http.post<any>(`${this.apiUrl}/auth/solicitar-reset`, formData)
+      .subscribe({
+        next: (res) => {
+          Swal.fire({
+            title: '🔑 Token generado',
+            html: `
+              <p style="margin-bottom:12px">Entrega este token a <strong>${user.nombre_completo}</strong>:</p>
+              <div style="background:#f1f5f9;padding:12px;border-radius:8px;font-family:monospace;font-size:13px;word-break:break-all;margin-bottom:8px">
+                ${res.token}
+              </div>
+              <p style="font-size:12px;color:#94a3b8">⏱️ Expira en 2 horas</p>
+            `,
+            confirmButtonText: '📋 Copiar token',
+            showCancelButton: true,
+            cancelButtonText: 'Cerrar',
+            confirmButtonColor: '#2563eb'
+          }).then(result => {
+            if (result.isConfirmed) {
+              navigator.clipboard.writeText(res.token);
+              Swal.fire({ title: '✅ Copiado', text: 'Token copiado al portapapeles', icon: 'success', timer: 1500, showConfirmButton: false });
+            }
+          });
+        },
+        error: (err) => alert('❌ Error: ' + (err.error?.detail || 'No se pudo generar el token'))
+      });
   }
 
   iniciarMonitoreo() {

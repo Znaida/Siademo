@@ -1,10 +1,11 @@
 import os
+import os as _os
 from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    secret_key: str = "dev_local_key_cambiar_en_produccion_2026"
+    secret_key: str
     algorithm: str = "HS256"
     admin_user: str = ""
     admin_pass: str = ""
@@ -32,7 +33,7 @@ else:
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- CORS ---
+_is_prod = bool(_os.getenv("WEBSITE_HOSTNAME"))
 ALLOWED_ORIGINS = [
     "https://ashy-desert-090fd4a0f.2.azurestaticapps.net",
-    "http://localhost:4200",
-]
+] + ([] if _is_prod else ["http://localhost:4200", "http://127.0.0.1:4200"])

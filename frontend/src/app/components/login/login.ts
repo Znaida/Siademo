@@ -13,17 +13,25 @@ import { environment } from '../../../environments/environment';
 export class Login implements OnInit {
   // --- VARIABLES DE ESTADO ---
   public captchaPregunta: string = '';
-  public paso2: boolean = false; 
-  public cargando: boolean = false; 
-  public mensajeSeguridad: boolean = false; 
-  
-  // AJUSTE: Incluimos captchaToken aquí para que TypeScript lo reconozca
+  public paso2: boolean = false;
+  public cargando: boolean = false;
+  public mensajeSeguridad: boolean = false;
+  public modoReset: boolean = false;
+  public resetExitoso: boolean = false;
+  public resetError: string = '';
+
   public loginData = {
     usuario: '',
     password: '',
     captchaRespuesta: null as number | null,
-    captchaToken: '', // <--- AQUÍ SE GUARDA EL TOKEN FIRMADO DEL BACKEND
+    captchaToken: '',
     codigo2fa: ''
+  };
+
+  public resetData = {
+    token: '',
+    password_nuevo: '',
+    password_confirmar: ''
   };
 
   private apiUrl = environment.apiUrl;
@@ -62,7 +70,7 @@ export class Login implements OnInit {
         // Guardamos el token en el objeto loginData
         this.loginData.captchaToken = res.captcha_token; 
         
-        console.log("Reto de integridad cargado:", res.pregunta);
+        // console.log("Reto de integridad cargado:", res.pregunta);
         this.cd.detectChanges();
       },
       error: (err) => {
@@ -118,14 +126,55 @@ export class Login implements OnInit {
           }
           this.cd.detectChanges();
         },
-        error: (err) => { 
+        error: (err) => {
           alert(err.error?.detail || "Fallo en la autenticación.");
           if (!this.paso2) {
             this.loginData.captchaRespuesta = null;
-            this.obtenerCaptcha(); // Refrescamos el reto matemático
+            this.obtenerCaptcha();
           }
           this.cd.detectChanges();
         }
+      });
+  }
+
+  abrirReset() {
+    this.modoReset = true;
+    this.resetExitoso = false;
+    this.resetError = '';
+    this.resetData = { token: '', password_nuevo: '', password_confirmar: '' };
+  }
+
+  volverLogin() {
+    this.modoReset = false;
+    this.resetExitoso = false;
+    this.resetError = '';
+  }
+
+  enviarReset(event: Event) {
+    event.preventDefault();
+    if (this.cargando) return;
+    this.resetError = '';
+
+    if (this.resetData.password_nuevo !== this.resetData.password_confirmar) {
+      this.resetError = 'Las contraseñas no coinciden.';
+      return;
+    }
+    if (this.resetData.password_nuevo.length < 8) {
+      this.resetError = 'La contraseña debe tener al menos 8 caracteres.';
+      return;
+    }
+
+    this.cargando = true;
+    const formData = new FormData();
+    formData.append('token', this.resetData.token.trim());
+    formData.append('password_nuevo', this.resetData.password_nuevo);
+    formData.append('password_confirmar', this.resetData.password_confirmar);
+
+    this.http.post<any>(`${this.apiUrl}/auth/reset-password`, formData)
+      .pipe(finalize(() => { this.cargando = false; this.cd.detectChanges(); }))
+      .subscribe({
+        next: () => { this.resetExitoso = true; this.cd.detectChanges(); },
+        error: (err) => { this.resetError = err.error?.detail || 'Error al restablecer la contraseña.'; this.cd.detectChanges(); }
       });
   }
 }

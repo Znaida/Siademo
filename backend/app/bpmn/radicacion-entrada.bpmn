@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://siade.alcaldia.gov.co/bpmn">
+
+  <bpmn:process id="RadicacionEntrada" name="Radicación de Comunicaciones Recibidas" isExecutable="true">
+
+    <bpmn:startEvent id="inicio" name="Ciudadano entrega documento">
+      <bpmn:outgoing>flujo1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="ventanillaRadica" name="Ventanilla radica el documento">
+      <bpmn:incoming>flujo1</bpmn:incoming>
+      <bpmn:outgoing>flujo2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="generarSticker" name="Sistema genera número y sticker QR">
+      <bpmn:incoming>flujo2</bpmn:incoming>
+      <bpmn:outgoing>flujo3</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="documentoCompleto" name="¿Documento completo?">
+      <bpmn:incoming>flujo3</bpmn:incoming>
+      <bpmn:outgoing>flujo4ok</bpmn:outgoing>
+      <bpmn:outgoing>flujo4no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="devolverCiudadano" name="Devolver al ciudadano con observaciones">
+      <bpmn:incoming>flujo4no</bpmn:incoming>
+      <bpmn:outgoing>flujo5</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="finDevolucion" name="Fin — Documento devuelto">
+      <bpmn:incoming>flujo5</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="asignarDependencia" name="Asignar a dependencia responsable&#10;ANS: 1 día hábil">
+      <bpmn:incoming>flujo4ok</bpmn:incoming>
+      <bpmn:outgoing>flujo6</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="dependenciaRevisa" name="Dependencia revisa y tramita&#10;ANS: 5 días hábiles">
+      <bpmn:incoming>flujo6</bpmn:incoming>
+      <bpmn:outgoing>flujo7</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="requiereRespuesta" name="¿Requiere respuesta formal?">
+      <bpmn:incoming>flujo7</bpmn:incoming>
+      <bpmn:outgoing>flujo8si</bpmn:outgoing>
+      <bpmn:outgoing>flujo8no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="elaborarRespuesta" name="Elaborar respuesta formal&#10;ANS: 3 días hábiles">
+      <bpmn:incoming>flujo8si</bpmn:incoming>
+      <bpmn:outgoing>flujo9</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="notificarCiudadano" name="Sistema notifica al ciudadano por correo">
+      <bpmn:incoming>flujo9</bpmn:incoming>
+      <bpmn:outgoing>flujo10</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="archivarDocumento" name="Sistema archiva en Archivo Central">
+      <bpmn:incoming>flujo8no</bpmn:incoming>
+      <bpmn:incoming>flujo10</bpmn:incoming>
+      <bpmn:outgoing>flujoFin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="finProceso" name="Fin — Trámite completado">
+      <bpmn:incoming>flujoFin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="flujo1" sourceRef="inicio" targetRef="ventanillaRadica"/>
+    <bpmn:sequenceFlow id="flujo2" sourceRef="ventanillaRadica" targetRef="generarSticker"/>
+    <bpmn:sequenceFlow id="flujo3" sourceRef="generarSticker" targetRef="documentoCompleto"/>
+    <bpmn:sequenceFlow id="flujo4ok" name="Sí" sourceRef="documentoCompleto" targetRef="asignarDependencia"/>
+    <bpmn:sequenceFlow id="flujo4no" name="No" sourceRef="documentoCompleto" targetRef="devolverCiudadano"/>
+    <bpmn:sequenceFlow id="flujo5" sourceRef="devolverCiudadano" targetRef="finDevolucion"/>
+    <bpmn:sequenceFlow id="flujo6" sourceRef="asignarDependencia" targetRef="dependenciaRevisa"/>
+    <bpmn:sequenceFlow id="flujo7" sourceRef="dependenciaRevisa" targetRef="requiereRespuesta"/>
+    <bpmn:sequenceFlow id="flujo8si" name="Sí" sourceRef="requiereRespuesta" targetRef="elaborarRespuesta"/>
+    <bpmn:sequenceFlow id="flujo8no" name="No" sourceRef="requiereRespuesta" targetRef="archivarDocumento"/>
+    <bpmn:sequenceFlow id="flujo9" sourceRef="elaborarRespuesta" targetRef="notificarCiudadano"/>
+    <bpmn:sequenceFlow id="flujo10" sourceRef="notificarCiudadano" targetRef="archivarDocumento"/>
+    <bpmn:sequenceFlow id="flujoFin" sourceRef="archivarDocumento" targetRef="finProceso"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="RadicacionEntrada">
+      <bpmndi:BPMNShape id="inicio_di" bpmnElement="inicio"><dc:Bounds x="152" y="82" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ventanillaRadica_di" bpmnElement="ventanillaRadica"><dc:Bounds x="240" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="generarSticker_di" bpmnElement="generarSticker"><dc:Bounds x="410" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="documentoCompleto_di" bpmnElement="documentoCompleto" isMarkerVisible="true"><dc:Bounds x="585" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="devolverCiudadano_di" bpmnElement="devolverCiudadano"><dc:Bounds x="560" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="finDevolucion_di" bpmnElement="finDevolucion"><dc:Bounds x="732" y="222" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="asignarDependencia_di" bpmnElement="asignarDependencia"><dc:Bounds x="690" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dependenciaRevisa_di" bpmnElement="dependenciaRevisa"><dc:Bounds x="860" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="requiereRespuesta_di" bpmnElement="requiereRespuesta" isMarkerVisible="true"><dc:Bounds x="1035" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="elaborarRespuesta_di" bpmnElement="elaborarRespuesta"><dc:Bounds x="1140" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="notificarCiudadano_di" bpmnElement="notificarCiudadano"><dc:Bounds x="1310" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archivarDocumento_di" bpmnElement="archivarDocumento"><dc:Bounds x="1310" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="finProceso_di" bpmnElement="finProceso"><dc:Bounds x="1482" y="222" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flujo1_di" bpmnElement="flujo1"><di:waypoint x="188" y="100"/><di:waypoint x="240" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo2_di" bpmnElement="flujo2"><di:waypoint x="360" y="100"/><di:waypoint x="410" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo3_di" bpmnElement="flujo3"><di:waypoint x="530" y="100"/><di:waypoint x="585" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo4ok_di" bpmnElement="flujo4ok"><di:waypoint x="635" y="100"/><di:waypoint x="690" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo4no_di" bpmnElement="flujo4no"><di:waypoint x="610" y="125"/><di:waypoint x="610" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo5_di" bpmnElement="flujo5"><di:waypoint x="680" y="240"/><di:waypoint x="732" y="240"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo6_di" bpmnElement="flujo6"><di:waypoint x="810" y="100"/><di:waypoint x="860" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo7_di" bpmnElement="flujo7"><di:waypoint x="980" y="100"/><di:waypoint x="1035" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo8si_di" bpmnElement="flujo8si"><di:waypoint x="1085" y="100"/><di:waypoint x="1140" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo8no_di" bpmnElement="flujo8no"><di:waypoint x="1060" y="125"/><di:waypoint x="1060" y="240"/><di:waypoint x="1310" y="240"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo9_di" bpmnElement="flujo9"><di:waypoint x="1260" y="100"/><di:waypoint x="1310" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo10_di" bpmnElement="flujo10"><di:waypoint x="1370" y="140"/><di:waypoint x="1370" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujoFin_di" bpmnElement="flujoFin"><di:waypoint x="1430" y="240"/><di:waypoint x="1482" y="240"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

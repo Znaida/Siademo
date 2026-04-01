@@ -4,6 +4,7 @@ Toda la lógica de acceso a BD para radicados vive aquí.
 Los routers llaman estas funciones; no tocan la BD directamente.
 """
 import json
+import uuid as _uuid
 from datetime import datetime, timedelta, date
 from fastapi import HTTPException
 from app.core.database import get_db_connection
@@ -69,7 +70,9 @@ def crear_radicado(
         return {"nro_radicado": nro_radicado, "vencimiento": str(vencimiento.date())}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        ref = str(_uuid.uuid4())[:8].upper()
+        print(f"[ERROR {ref}] {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor. Referencia: {ref}")
     finally:
         cur.close()
         conn.close()
@@ -232,7 +235,9 @@ def trasladar_radicado(nro_radicado: str, data: TrasladoData, user_id: int, rol:
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        ref = str(_uuid.uuid4())[:8].upper()
+        print(f"[ERROR {ref}] {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor. Referencia: {ref}")
     finally:
         cur.close()
         conn.close()
@@ -267,7 +272,9 @@ def archivar_radicado(nro_radicado: str, data: ArchivarData, user_id: int, rol: 
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        ref = str(_uuid.uuid4())[:8].upper()
+        print(f"[ERROR {ref}] {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor. Referencia: {ref}")
     finally:
         cur.close()
         conn.close()

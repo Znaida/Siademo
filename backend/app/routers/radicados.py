@@ -81,6 +81,15 @@ async def radicar_oficial(
 
     # Leer contenido del archivo principal para calcular SHA-256
     contenido_principal = await archivo_principal.read()
+
+    EXTENSIONES_PERMITIDAS = {'pdf', 'docx', 'doc', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'xml', 'txt'}
+    TAMANO_MAXIMO = 20 * 1024 * 1024  # 20 MB
+    ext = archivo_principal.filename.rsplit(".", 1)[-1].lower() if "." in archivo_principal.filename else ""
+    if ext not in EXTENSIONES_PERMITIDAS:
+        raise HTTPException(status_code=400, detail=f"Tipo de archivo no permitido. Extensiones válidas: {', '.join(sorted(EXTENSIONES_PERMITIDAS))}")
+    if len(contenido_principal) > TAMANO_MAXIMO:
+        raise HTTPException(status_code=413, detail="El archivo supera el tamaño máximo permitido de 20 MB.")
+
     hash_sha256 = hashlib.sha256(contenido_principal).hexdigest()
 
     ext = archivo_principal.filename.split(".")[-1]
@@ -111,9 +120,9 @@ async def endpoint_listar_radicados(
     fecha_hasta: Optional[str] = Query(None),
     tipo_doc: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
-    dependencia: Optional[str] = Query(None),
-    q: Optional[str] = Query(None, description="Búsqueda libre"),
-    serie_filtro: Optional[str] = Query(None, description="Filtro por serie"),
+    dependencia: Optional[str] = Query(None, max_length=100),
+    q: Optional[str] = Query(None, max_length=200, description="Búsqueda libre"),
+    serie_filtro: Optional[str] = Query(None, max_length=100, description="Filtro por serie"),
     vencido: Optional[str] = Query(None, description="si | no"),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200)
@@ -176,6 +185,20 @@ async def endpoint_historial(
     nro_radicado: str,
     user_info: dict = Depends(obtener_usuario_actual)
 ):
+    # Verificar que el usuario tenga acceso al radicado (rol 0 y 1 ven todo)
+    if user_info['rol'] > 1:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM radicados WHERE nro_radicado = ? AND (creado_por = ? OR funcionario_responsable_id = ?)",
+            (nro_radicado, user_info['id'], user_info['id'])
+        )
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            raise HTTPException(status_code=403, detail="No tienes acceso al historial de este radicado.")
+        cur.close()
+        conn.close()
     return historial_radicado(nro_radicado)
 
 

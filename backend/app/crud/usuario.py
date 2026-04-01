@@ -2,6 +2,7 @@
 CRUD — Usuarios
 Toda la lógica de acceso a BD para usuarios vive aquí.
 """
+import uuid as _uuid
 from fastapi import HTTPException
 from app.core.database import get_db_connection, is_postgres
 
@@ -25,7 +26,9 @@ def crear_usuario(usuario: str, nombre_completo: str, rol_id: int,
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        ref = str(_uuid.uuid4())[:8].upper()
+        print(f"[ERROR {ref}] {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor. Referencia: {ref}")
     finally:
         cur.close()
         conn.close()
@@ -67,7 +70,9 @@ def cambiar_estado_usuario(user_id: int, nuevo_estado: bool) -> None:
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        ref = str(_uuid.uuid4())[:8].upper()
+        print(f"[ERROR {ref}] {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor. Referencia: {ref}")
     finally:
         cur.close()
         conn.close()

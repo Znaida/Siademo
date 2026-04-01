@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_3"
+                  targetNamespace="http://siade.alcaldia.gov.co/bpmn">
+
+  <bpmn:process id="ComunicacionInterna" name="Comunicaciones Internas" isExecutable="true">
+
+    <bpmn:startEvent id="inicio" name="Funcionario genera comunicación interna">
+      <bpmn:outgoing>flujo1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="redactarMemorando" name="Redactar memorando / circular&#10;ANS: mismo día">
+      <bpmn:incoming>flujo1</bpmn:incoming>
+      <bpmn:outgoing>flujo2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="jefeAprueba" name="Jefe revisa y aprueba&#10;ANS: 1 día hábil">
+      <bpmn:incoming>flujo2</bpmn:incoming>
+      <bpmn:outgoing>flujo3</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="aprobado" name="¿Aprobado?">
+      <bpmn:incoming>flujo3</bpmn:incoming>
+      <bpmn:outgoing>flujo4si</bpmn:outgoing>
+      <bpmn:outgoing>flujo4no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="corregir" name="Corregir y reenviar">
+      <bpmn:incoming>flujo4no</bpmn:incoming>
+      <bpmn:outgoing>flujoVolver</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="radicarInterno" name="Sistema asigna número de radicado interno">
+      <bpmn:incoming>flujo4si</bpmn:incoming>
+      <bpmn:outgoing>flujo5</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="notificarDestinatario" name="Sistema notifica al destinatario">
+      <bpmn:incoming>flujo5</bpmn:incoming>
+      <bpmn:outgoing>flujo6</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="destinatarioRecibe" name="Destinatario recibe y acusa recibo&#10;ANS: 1 día hábil">
+      <bpmn:incoming>flujo6</bpmn:incoming>
+      <bpmn:outgoing>flujo7</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="requiereAccion" name="¿Requiere acción?">
+      <bpmn:incoming>flujo7</bpmn:incoming>
+      <bpmn:outgoing>flujo8si</bpmn:outgoing>
+      <bpmn:outgoing>flujo8no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="ejecutarAccion" name="Ejecutar acción requerida&#10;ANS: según tipo">
+      <bpmn:incoming>flujo8si</bpmn:incoming>
+      <bpmn:outgoing>flujo9</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="archivar" name="Sistema archiva comunicación">
+      <bpmn:incoming>flujo8no</bpmn:incoming>
+      <bpmn:incoming>flujo9</bpmn:incoming>
+      <bpmn:outgoing>flujoFin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="fin" name="Fin — Comunicación interna tramitada">
+      <bpmn:incoming>flujoFin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="flujo1" sourceRef="inicio" targetRef="redactarMemorando"/>
+    <bpmn:sequenceFlow id="flujo2" sourceRef="redactarMemorando" targetRef="jefeAprueba"/>
+    <bpmn:sequenceFlow id="flujo3" sourceRef="jefeAprueba" targetRef="aprobado"/>
+    <bpmn:sequenceFlow id="flujo4si" name="Sí" sourceRef="aprobado" targetRef="radicarInterno"/>
+    <bpmn:sequenceFlow id="flujo4no" name="No" sourceRef="aprobado" targetRef="corregir"/>
+    <bpmn:sequenceFlow id="flujoVolver" sourceRef="corregir" targetRef="jefeAprueba"/>
+    <bpmn:sequenceFlow id="flujo5" sourceRef="radicarInterno" targetRef="notificarDestinatario"/>
+    <bpmn:sequenceFlow id="flujo6" sourceRef="notificarDestinatario" targetRef="destinatarioRecibe"/>
+    <bpmn:sequenceFlow id="flujo7" sourceRef="destinatarioRecibe" targetRef="requiereAccion"/>
+    <bpmn:sequenceFlow id="flujo8si" name="Sí" sourceRef="requiereAccion" targetRef="ejecutarAccion"/>
+    <bpmn:sequenceFlow id="flujo8no" name="No" sourceRef="requiereAccion" targetRef="archivar"/>
+    <bpmn:sequenceFlow id="flujo9" sourceRef="ejecutarAccion" targetRef="archivar"/>
+    <bpmn:sequenceFlow id="flujoFin" sourceRef="archivar" targetRef="fin"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_3">
+    <bpmndi:BPMNPlane id="BPMNPlane_3" bpmnElement="ComunicacionInterna">
+      <bpmndi:BPMNShape id="inicio_di" bpmnElement="inicio"><dc:Bounds x="152" y="82" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="redactarMemorando_di" bpmnElement="redactarMemorando"><dc:Bounds x="240" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="jefeAprueba_di" bpmnElement="jefeAprueba"><dc:Bounds x="410" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="aprobado_di" bpmnElement="aprobado" isMarkerVisible="true"><dc:Bounds x="585" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="corregir_di" bpmnElement="corregir"><dc:Bounds x="560" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="radicarInterno_di" bpmnElement="radicarInterno"><dc:Bounds x="690" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="notificarDestinatario_di" bpmnElement="notificarDestinatario"><dc:Bounds x="860" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="destinatarioRecibe_di" bpmnElement="destinatarioRecibe"><dc:Bounds x="1030" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="requiereAccion_di" bpmnElement="requiereAccion" isMarkerVisible="true"><dc:Bounds x="1205" y="75" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ejecutarAccion_di" bpmnElement="ejecutarAccion"><dc:Bounds x="1310" y="60" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archivar_di" bpmnElement="archivar"><dc:Bounds x="1310" y="200" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="fin_di" bpmnElement="fin"><dc:Bounds x="1482" y="222" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flujo1_di" bpmnElement="flujo1"><di:waypoint x="188" y="100"/><di:waypoint x="240" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo2_di" bpmnElement="flujo2"><di:waypoint x="360" y="100"/><di:waypoint x="410" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo3_di" bpmnElement="flujo3"><di:waypoint x="530" y="100"/><di:waypoint x="585" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo4si_di" bpmnElement="flujo4si"><di:waypoint x="635" y="100"/><di:waypoint x="690" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo4no_di" bpmnElement="flujo4no"><di:waypoint x="610" y="125"/><di:waypoint x="610" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujoVolver_di" bpmnElement="flujoVolver"><di:waypoint x="560" y="240"/><di:waypoint x="470" y="240"/><di:waypoint x="470" y="140"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo5_di" bpmnElement="flujo5"><di:waypoint x="810" y="100"/><di:waypoint x="860" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo6_di" bpmnElement="flujo6"><di:waypoint x="980" y="100"/><di:waypoint x="1030" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo7_di" bpmnElement="flujo7"><di:waypoint x="1150" y="100"/><di:waypoint x="1205" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo8si_di" bpmnElement="flujo8si"><di:waypoint x="1255" y="100"/><di:waypoint x="1310" y="100"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo8no_di" bpmnElement="flujo8no"><di:waypoint x="1230" y="125"/><di:waypoint x="1230" y="240"/><di:waypoint x="1310" y="240"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujo9_di" bpmnElement="flujo9"><di:waypoint x="1370" y="140"/><di:waypoint x="1370" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flujoFin_di" bpmnElement="flujoFin"><di:waypoint x="1430" y="240"/><di:waypoint x="1482" y="240"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,13 +1,13 @@
 import random
 import uuid
 import pyotp
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Request, Form, Depends
 from jose import jwt
 from app.core.config import SECRET_KEY, ALGORITHM, pwd_context, settings
 from app.core.database import get_db_connection
 from app.core.redis_client import get_redis
-from app.core.security import firmar_resultado, verificar_password, registrar_evento, obtener_usuario_actual
+from app.core.security import firmar_resultado, verificar_password, registrar_evento, obtener_usuario_actual, obtener_admin_actual
 from app.schemas.usuario import CambiarPasswordData
 
 router = APIRouter()
@@ -101,12 +101,14 @@ async def login(
 async def verify_2fa(request: Request, usuario: str = Form(...), codigo: str = Form(...)):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, secret_2fa, rol_id, debe_cambiar_password FROM usuarios WHERE usuario = ?", (usuario,))
+    cur.execute("SELECT id, secret_2fa, rol_id, debe_cambiar_password FROM usuarios WHERE usuario = ? AND activo = 1", (usuario,))
     user = cur.fetchone()
     cur.close()
     conn.close()
 
-    secret = user['secret_2fa'] if user['secret_2fa'] else "JBSWY3DPEHPK3PXP"
+    if not user or not user['secret_2fa']:
+        raise HTTPException(status_code=401, detail="Cuenta sin 2FA configurado. Contacte al administrador.")
+    secret = user['secret_2fa']
     totp = pyotp.TOTP(secret)
     if totp.verify(codigo):
         token_data = {
@@ -114,7 +116,7 @@ async def verify_2fa(request: Request, usuario: str = Form(...), codigo: str = F
             "id_usuario": user['id'],
             "rol": user['rol_id'],
             "jti": str(uuid.uuid4()),  # T7.2.2 — ID único para blacklist al logout
-            "exp": datetime.utcnow() + timedelta(hours=8)
+            "exp": datetime.now(timezone.utc) + timedelta(hours=8)
         }
         token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
         registrar_evento(user['id'], 'LOGIN_SUCCESS', 'AUTH', 'Sesión iniciada', request)
@@ -216,10 +218,101 @@ async def logout(request: Request, usuario_actual: dict = Depends(obtener_usuari
         if jti and exp:
             redis = get_redis()
             if redis:
-                ttl = int(exp - datetime.utcnow().timestamp())
+                ttl = int(exp - datetime.now(timezone.utc).timestamp())
                 if ttl > 0:
                     redis.set(f"blacklist:{jti}", "1", ex=ttl)
     except Exception:
         pass  # Si el token ya expiró o falla el decode, igualmente cerramos sesión
     registrar_evento(usuario_actual['id'], 'LOGOUT', 'AUTH', 'Sesión cerrada', request)
     return {"mensaje": "Sesión cerrada exitosamente"}
+
+
+# ── Recuperación de contraseña ─────────────────────────────────────────────────
+
+@router.post("/auth/solicitar-reset")
+async def solicitar_reset(request: Request, usuario: str = Form(...), admin_actual: dict = Depends(obtener_admin_actual)):
+    """
+    El admin llama a este endpoint para generar un token de reset para un usuario.
+    En producción con SendGrid, aquí se enviaría el email automáticamente.
+    Sin SendGrid, el admin entrega el token manualmente al usuario.
+    """
+    import secrets
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, nombre_completo FROM usuarios WHERE usuario = ? AND activo = 1", (usuario,))
+        user = cur.fetchone()
+        if not user:
+            # Respuesta genérica para no revelar si el usuario existe
+            return {"mensaje": "Si el usuario existe, se generó el token de recuperación."}
+
+        # Invalidar tokens anteriores del mismo usuario
+        cur.execute("UPDATE password_reset_tokens SET usado = 1 WHERE usuario_id = ?", (user['id'],))
+
+        token = secrets.token_urlsafe(32)
+        expira = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        cur.execute("""
+            INSERT INTO password_reset_tokens (usuario_id, token, expira_en)
+            VALUES (?, ?, ?)
+        """, (user['id'], token, expira))
+        conn.commit()
+
+        registrar_evento(user['id'], 'RESET_TOKEN_GENERADO', 'AUTH',
+                         f'Token de reset generado para {usuario}', request)
+
+        # TODO T7.3.1: cuando SendGrid esté disponible, enviar email aquí
+        # Por ahora el admin entrega el token manualmente
+        print(f"[RESET TOKEN] Usuario: {usuario} | Token: {token} | Expira: {expira}")
+        return {
+            "mensaje": "Entrega al usuario el token generado. Revisa los logs del servidor o la tabla password_reset_tokens.",
+            "usuario": usuario,
+            "expira_en": expira,
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.post("/auth/reset-password")
+async def reset_password(
+    request: Request,
+    token: str = Form(...),
+    password_nuevo: str = Form(...),
+    password_confirmar: str = Form(...)
+):
+    """El usuario usa el token recibido para establecer una nueva contraseña."""
+    if password_nuevo != password_confirmar:
+        raise HTTPException(status_code=400, detail="Las contraseñas no coinciden.")
+    if len(password_nuevo) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT t.usuario_id, t.expira_en, t.usado, u.usuario
+            FROM password_reset_tokens t
+            JOIN usuarios u ON u.id = t.usuario_id
+            WHERE t.token = ?
+        """, (token,))
+        row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=400, detail="Token inválido o ya utilizado.")
+        if row['usado']:
+            raise HTTPException(status_code=400, detail="Este token ya fue utilizado.")
+        if datetime.now(timezone.utc).isoformat() > row['expira_en']:
+            raise HTTPException(status_code=400, detail="El token ha expirado. Solicita uno nuevo.")
+
+        nuevo_hash = pwd_context.hash(password_nuevo)
+        cur.execute("UPDATE usuarios SET password_hash = ?, debe_cambiar_password = 0 WHERE id = ?",
+                    (nuevo_hash, row['usuario_id']))
+        cur.execute("UPDATE password_reset_tokens SET usado = 1 WHERE token = ?", (token,))
+        conn.commit()
+
+        registrar_evento(row['usuario_id'], 'RESET_PASSWORD', 'AUTH',
+                         f"Contraseña restablecida via token para {row['usuario']}", request)
+        return {"mensaje": "Contraseña restablecida exitosamente. Ya puedes iniciar sesión."}
+    finally:
+        cur.close()
+        conn.close()

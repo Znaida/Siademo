@@ -1260,11 +1260,17 @@
                     <button (click)="abrirAsignacionGrupos(user)" class="config-btn" style="color: #2563eb;" title="Asignar a Grupos">
                       👥
                     </button>
-                    <button (click)="toggleEstadoUsuario(user)" 
+                    <button (click)="toggleEstadoUsuario(user)"
                             class="config-btn"
                             [style.color]="user.activo ? '#ef4444' : '#16a34a'"
                             [title]="user.activo ? 'Inactivar usuario' : 'Reactivar usuario'">
                       {{ user.activo ? '🚫' : '✅' }}
+                    </button>
+                    <button (click)="generarTokenReset(user)"
+                            class="config-btn"
+                            style="color: #f59e0b;"
+                            title="Generar token de recuperación de contraseña">
+                      🔑
                     </button>
                   </div>
                 </td>
@@ -1650,7 +1656,25 @@
 
     <!-- ===== SECCIÓN: FLUJOS DE TRABAJO ===== -->
     <ng-container *ngIf="seccionActiva === 'flujos'">
-      <app-flujos></app-flujos>
+      <!-- Tabs: Visualizar / Editor -->
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button
+          [style.background]="flujoTab === 'ver' ? '#2563eb' : '#f1f5f9'"
+          [style.color]="flujoTab === 'ver' ? '#fff' : '#64748b'"
+          style="padding:8px 20px; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;"
+          (click)="flujoTab = 'ver'">
+          👁 Visualizar flujos
+        </button>
+        <button *ngIf="userRole === 0 || userRole === 1"
+          [style.background]="flujoTab === 'editar' ? '#2563eb' : '#f1f5f9'"
+          [style.color]="flujoTab === 'editar' ? '#fff' : '#64748b'"
+          style="padding:8px 20px; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;"
+          (click)="flujoTab = 'editar'">
+          ✏️ Editor drag & drop
+        </button>
+      </div>
+      <app-flujos *ngIf="flujoTab === 'ver'"></app-flujos>
+      <app-bpmn-editor *ngIf="flujoTab === 'editar'"></app-bpmn-editor>
     </ng-container>
 
     <!-- ===== SECCIÓN: INFORMES ===== -->
