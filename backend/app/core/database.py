@@ -293,8 +293,8 @@ def inicializar_db():
             transferido_por INTEGER
         )""",
         # T8.2/T8.3 — Plantillas de flujos BPMN editables por el admin
-        """CREATE TABLE IF NOT EXISTS workflow_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        f"""CREATE TABLE IF NOT EXISTS workflow_templates (
+            id {pk},
             nombre TEXT NOT NULL,
             descripcion TEXT,
             tipo TEXT NOT NULL,
@@ -307,8 +307,8 @@ def inicializar_db():
             modificado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         # Recuperación de contraseña — tokens temporales
-        """CREATE TABLE IF NOT EXISTS password_reset_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        f"""CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id {pk},
             usuario_id INTEGER NOT NULL,
             token TEXT NOT NULL UNIQUE,
             usado INTEGER DEFAULT 0,
@@ -316,8 +316,8 @@ def inicializar_db():
             expira_en TIMESTAMP NOT NULL
         )""",
         # T4.5.1 — Metadatos de facturas electrónicas DIAN
-        """CREATE TABLE IF NOT EXISTS facturas_dian (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        f"""CREATE TABLE IF NOT EXISTS facturas_dian (
+            id {pk},
             nro_radicado TEXT NOT NULL,
             tipo_documento TEXT,
             nro_factura TEXT,
@@ -366,6 +366,21 @@ def inicializar_db():
         )
     """)
     conn.commit()
+
+    # Seed admin por defecto si no existe ningún usuario con rol_id = 0.
+    # Omitido en tests — el conftest.py gestiona los usuarios de prueba.
+    if not os.getenv("TEST_DB_PATH"):
+        cur.execute("SELECT COUNT(*) as total FROM usuarios WHERE rol_id = 0")
+        if cur.fetchone()['total'] == 0:
+            from app.core.config import pwd_context as _pwd
+            _admin_hash = _pwd.hash("Admin2026!")
+            cur.execute(
+                "INSERT INTO usuarios (usuario, password_hash, nombre_completo, rol_id, secret_2fa, activo) VALUES (?, ?, ?, ?, ?, ?)",
+                ("admin", _admin_hash, "Administrador del Sistema", 0, "JBSWY3DPEHPK3PXP", 1)
+            )
+            conn.commit()
+            print("[INIT] Usuario admin creado. Credenciales: admin / Admin2026! — cámbielas inmediatamente.")
+
     conn.close()
 
 
