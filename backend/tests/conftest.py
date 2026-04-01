@@ -79,6 +79,9 @@ def setup_test_db():
          "Correspondencia", "Archivado", "2026-03-05 09:00:00", 5, "2026-03-10", 1, 2, "/tmp/doc2.pdf"),
         ("ENV-2026-00001", "ENVIADA", "Alcaldía", "Memorando interno",
          "Memorandos", "En Trámite", "2026-03-10 08:00:00", 10, "2026-03-20", 2, 2, "/tmp/doc3.pdf"),
+        # Radicado exclusivo de admin — nunca modificado por otros tests (usado en TestHistorialAcceso)
+        ("ADM-2026-00099", "RECIBIDA", "Admin Exclusivo", "Radicado de prueba IDOR",
+         "Contratos", "Radicado", "2026-03-01 12:00:00", 30, "2026-04-01", 1, 1, "/tmp/adm99.pdf"),
     ]
     for r in radicados:
         conn.execute("""
