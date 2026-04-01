@@ -7,7 +7,14 @@
       <p style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; color: #64748b; tracking-widest: 0.2em;">Gestión Documental Segura</p>
     </div>
 
-    <div class="instruction-box warning" *ngIf="mensajeSeguridad && !paso2" 
+    <div class="instruction-box warning" *ngIf="sesionExpirada && !paso2"
+         style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem;">
+      <p style="font-size: 0.8rem; color: #92400e; font-weight: 700; margin: 0;">
+        ⏱️ <strong>SESIÓN EXPIRADA:</strong> Su sesión ha caducado. Por favor, inicie sesión nuevamente.
+      </p>
+    </div>
+
+    <div class="instruction-box warning" *ngIf="mensajeSeguridad && !sesionExpirada && !paso2"
          style="background: #fff1f2; border-left: 4px solid #f43f5e; padding: 1rem; border-radius: 1rem; margin-bottom: 2rem;">
       <p style="font-size: 0.8rem; color: #9f1239; font-weight: 700; margin: 0;">
         🛡️ <strong>ACCESO RESTRINGIDO:</strong> Credenciales requeridas.

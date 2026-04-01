@@ -46,9 +46,10 @@ export class AuthInterceptor implements HttpInterceptor {
   private manejarExpiracion(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const refreshToken = localStorage.getItem('refresh_token');
 
-    // Si no hay refresh token el usuario simplemente no está logueado — propagar el error sin redirigir
+    // Sin refresh token: sesión expirada — limpiar y redirigir al login
     if (!refreshToken) {
-      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }));
+      this.cerrarSesion();
+      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Session expired' }));
     }
 
     if (this.refreshing) {

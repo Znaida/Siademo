@@ -16,6 +16,7 @@ export class Login implements OnInit {
   public paso2: boolean = false;
   public cargando: boolean = false;
   public mensajeSeguridad: boolean = false;
+  public sesionExpirada: boolean = false;
   public modoReset: boolean = false;
   public resetExitoso: boolean = false;
   public resetError: string = '';
@@ -53,6 +54,10 @@ export class Login implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['auth'] === 'denied') {
         this.mensajeSeguridad = true;
+        this.cd.detectChanges();
+      }
+      if (params['auth'] === 'expired') {
+        this.sesionExpirada = true;
         this.cd.detectChanges();
       }
     });
