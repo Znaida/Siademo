@@ -12,6 +12,7 @@ import QRCode from 'qrcode';
 import { Chart, registerables } from 'chart.js';
 import * as XLSX from 'xlsx';
 import { environment } from '../../../environments/environment';
+import { COLOMBIA_DEPARTAMENTOS, COLOMBIA_DEPARTAMENTOS_MUNICIPIOS } from '../../data/colombia-municipios';
 
 Chart.register(...registerables);
 
@@ -22,6 +23,21 @@ Chart.register(...registerables);
   standalone: false
 })
 export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
+  // --- DATOS GEOGRÁFICOS COLOMBIA ---
+  readonly departamentos = COLOMBIA_DEPARTAMENTOS;
+  municipios: string[] = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS['Caldas'] ?? [];
+  municipiosEnviada: string[] = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS['Caldas'] ?? [];
+
+  onDepartamentoChange(): void {
+    this.municipios = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.radicado.departamento] ?? [];
+    this.radicado.ciudad = this.municipios[0] ?? '';
+  }
+
+  onDepartamentoEnviadaChange(): void {
+    this.municipiosEnviada = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.radicadoEnviada?.departamento] ?? [];
+    if (this.radicadoEnviada) this.radicadoEnviada.ciudad = this.municipiosEnviada[0] ?? '';
+  }
+
   // --- ESTADO DEL USUARIO ---
   userRole: number = 0;
   userId: number = 0;

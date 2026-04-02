@@ -377,8 +377,20 @@
 
         <div class="siade-row-3">
           <div><label class="siade-label">País</label><select [(ngModel)]="radicado.pais" class="siade-select"><option value="Colombia">Colombia</option></select></div>
-          <div><label class="siade-label">Departamento</label><select [(ngModel)]="radicado.departamento" class="siade-select"><option value="Caldas">Caldas</option></select></div>
-          <div><label class="siade-label">Ciudad</label><select [(ngModel)]="radicado.ciudad" class="siade-select"><option value="Manizales">Manizales</option></select></div>
+          <div>
+            <label class="siade-label">Departamento</label>
+            <select [(ngModel)]="radicado.departamento" (change)="onDepartamentoChange()" class="siade-select">
+              <option value="">— Seleccione —</option>
+              <option *ngFor="let dep of departamentos" [value]="dep">{{ dep }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="siade-label">Municipio</label>
+            <select [(ngModel)]="radicado.ciudad" class="siade-select">
+              <option value="">— Seleccione —</option>
+              <option *ngFor="let mun of municipios" [value]="mun">{{ mun }}</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -568,8 +580,20 @@
 
         <div class="siade-row-3">
           <div><label class="siade-label">País</label><select [(ngModel)]="radicado.pais" class="siade-select"><option value="Colombia">Colombia</option></select></div>
-          <div><label class="siade-label">Departamento</label><select [(ngModel)]="radicado.departamento" class="siade-select"><option value="Caldas">Caldas</option></select></div>
-          <div><label class="siade-label">Ciudad</label><select [(ngModel)]="radicado.ciudad" class="siade-select"><option value="Manizales">Manizales</option></select></div>
+          <div>
+            <label class="siade-label">Departamento</label>
+            <select [(ngModel)]="radicado.departamento" (change)="onDepartamentoEnviadaChange()" class="siade-select">
+              <option value="">— Seleccione —</option>
+              <option *ngFor="let dep of departamentos" [value]="dep">{{ dep }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="siade-label">Municipio</label>
+            <select [(ngModel)]="radicado.ciudad" class="siade-select">
+              <option value="">— Seleccione —</option>
+              <option *ngFor="let mun of municipiosEnviada" [value]="mun">{{ mun }}</option>
+            </select>
+          </div>
         </div>
       </div>
 
