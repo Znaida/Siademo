@@ -34,8 +34,8 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onDepartamentoEnviadaChange(): void {
-    this.municipiosEnviada = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.radicadoEnviada?.departamento] ?? [];
-    if (this.radicadoEnviada) this.radicadoEnviada.ciudad = this.municipiosEnviada[0] ?? '';
+    this.municipiosEnviada = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.radicado.departamento] ?? [];
+    this.radicado.ciudad = this.municipiosEnviada[0] ?? '';
   }
 
   // --- ESTADO DEL USUARIO ---
