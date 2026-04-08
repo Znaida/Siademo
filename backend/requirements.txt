@@ -22,4 +22,5 @@ psycopg2-binary
 upstash-redis
 pytest
 pytest-cov
-pytest-asynciopymupdf
+pytest-asyncio
+pymupdf
