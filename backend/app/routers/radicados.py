@@ -3,10 +3,13 @@ import json
 import hashlib
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from app.core.config import UPLOAD_DIR
 from app.core.database import get_db_connection
 from app.core.security import obtener_usuario_actual, registrar_evento, generar_consecutivo
+from app.core.encryption import cifrar_archivo, descifrar_archivo, cifrado_activo
+from app.core.anonymizer import anonimizar_radicado
+from app.core.watermark import aplicar_marca_agua
 from app.schemas.radicado import RadicadoCreate, TrasladoData, ArchivarData
 from app.crud.radicado import (
     crear_radicado, listar_radicados, get_path_documento,
@@ -90,12 +93,13 @@ async def radicar_oficial(
     if len(contenido_principal) > TAMANO_MAXIMO:
         raise HTTPException(status_code=413, detail="El archivo supera el tamaño máximo permitido de 20 MB.")
 
+    # Hash calculado sobre el contenido ORIGINAL (antes de cifrar)
     hash_sha256 = hashlib.sha256(contenido_principal).hexdigest()
 
     ext = archivo_principal.filename.split(".")[-1]
     path_p = f"{UPLOAD_DIR}/{nro_radicado}_principal.{ext}"
     with open(path_p, "wb") as f:
-        f.write(contenido_principal)
+        f.write(cifrar_archivo(contenido_principal))  # Cifrado AES-256-GCM si hay clave
 
     rutas_anexos = []
     if anexos:
@@ -104,7 +108,7 @@ async def radicar_oficial(
             a_ext = anexo.filename.split(".")[-1]
             path_a = f"{UPLOAD_DIR}/{nro_radicado}_anexo_{i}.{a_ext}"
             with open(path_a, "wb") as f:
-                f.write(contenido_anexo)
+                f.write(cifrar_archivo(contenido_anexo))
             rutas_anexos.append(path_a)
 
     resultado = crear_radicado(data, nro_radicado, path_p, rutas_anexos, user_info['id'], hash_sha256)
@@ -125,20 +129,44 @@ async def endpoint_listar_radicados(
     serie_filtro: Optional[str] = Query(None, max_length=100, description="Filtro por serie"),
     vencido: Optional[str] = Query(None, description="si | no"),
     page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=200)
+    per_page: int = Query(50, ge=1, le=200),
+    anonimizar: bool = Query(False, description="Enmascarar PII — solo disponible para admin (rol 0)")
 ):
-    return listar_radicados(
+    resultado = listar_radicados(
         user_info['id'], user_info['rol'],
         fecha_desde, fecha_hasta, tipo_doc, estado, dependencia,
         q, serie_filtro, vencido, page, per_page
     )
+    # Anonimización: solo admin puede solicitarla (para análisis/testing)
+    if anonimizar and user_info['rol'] == 0:
+        items = resultado.get("items", resultado) if isinstance(resultado, dict) else resultado
+        anonimizados = [anonimizar_radicado(r) for r in items]
+        if isinstance(resultado, dict):
+            return {**resultado, "items": anonimizados, "_modo": "anonimizado"}
+        return anonimizados
+    return resultado
 
 
 @router.get("/radicados/{nro_radicado}/documento")
 async def ver_documento_radicado(
     nro_radicado: str,
+    request: Request,
     user_info: dict = Depends(obtener_usuario_actual)
 ):
+    # RBAC granular: rol >= 2 solo puede descargar documentos asignados a él o creados por él
+    if user_info['rol'] >= 2:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM radicados WHERE nro_radicado = ? AND (creado_por = ? OR funcionario_responsable_id = ?)",
+            (nro_radicado, user_info['id'], user_info['id'])
+        )
+        acceso = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not acceso:
+            raise HTTPException(status_code=403, detail="No tiene permiso para descargar este documento.")
+
     path = get_path_documento(nro_radicado, user_info['id'], user_info['rol'])
     if not path:
         raise HTTPException(status_code=404, detail="Documento no encontrado.")
@@ -152,7 +180,26 @@ async def ver_documento_radicado(
 
     filename = os.path.basename(real_path)
     media_type = "application/pdf" if filename.endswith(".pdf") else "application/octet-stream"
-    return FileResponse(path=real_path, filename=filename, media_type=media_type)
+
+    # Obtener IP del cliente para la marca de agua
+    ip_cliente = request.client.host if request.client else "desconocida"
+    nombre_usuario = user_info.get('nombre_completo') or user_info.get('usuario', 'Usuario')
+
+    # Leer contenido (descifrar si aplica)
+    with open(real_path, "rb") as f:
+        contenido_raw = f.read()
+
+    contenido = descifrar_archivo(contenido_raw) if cifrado_activo() else contenido_raw
+
+    # Aplicar marca de agua dinámica (solo PDFs; otros archivos pasan sin cambios)
+    contenido_final = aplicar_marca_agua(contenido, nombre_usuario, ip_cliente, filename)
+
+    registrar_evento(user_info['id'], 'DESCARGA_DOCUMENTO', 'RADICADOS', nro_radicado, request)
+    return Response(
+        content=contenido_final,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 @router.post("/radicados/{nro_radicado}/trasladar")

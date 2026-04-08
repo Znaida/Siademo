@@ -369,3 +369,180 @@ class TestLogout:
         res = user_override.post("/auth/logout")
         assert res.status_code == 200
         assert "cerrada" in res.json()["mensaje"].lower()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TESTS: Cifrado AES-256-GCM (encryption.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestCifrado:
+    """Tests unitarios del módulo de cifrado en reposo."""
+
+    def test_sin_clave_devuelve_datos_sin_modificar(self):
+        from app.core.encryption import cifrar_archivo, descifrar_archivo
+        datos = b"documento de prueba sin cifrar"
+        assert cifrar_archivo(datos) == datos
+        assert descifrar_archivo(datos) == datos
+
+    def test_cifrado_activo_false_sin_clave(self):
+        from app.core.encryption import cifrado_activo
+        assert cifrado_activo() is False
+
+    def test_cifrado_y_descifrado_con_clave(self, monkeypatch):
+        # Clave AES-256 válida (64 hex chars = 32 bytes)
+        clave = "a" * 64
+        monkeypatch.setenv("DOCUMENT_ENCRYPTION_KEY", clave)
+        from importlib import reload
+        import app.core.encryption as enc_mod
+        reload(enc_mod)
+
+        datos = b"contenido secreto del documento medico"
+        cifrado = enc_mod.cifrar_archivo(datos)
+        assert cifrado != datos
+        assert len(cifrado) > len(datos)  # nonce (12) + tag (16) añadidos
+        descifrado = enc_mod.descifrar_archivo(cifrado)
+        assert descifrado == datos
+
+        monkeypatch.delenv("DOCUMENT_ENCRYPTION_KEY")
+        reload(enc_mod)
+
+    def test_descifrado_falla_devuelve_original(self, monkeypatch):
+        clave = "b" * 64
+        monkeypatch.setenv("DOCUMENT_ENCRYPTION_KEY", clave)
+        from importlib import reload
+        import app.core.encryption as enc_mod
+        reload(enc_mod)
+
+        datos_corruptos = b"esto no esta cifrado correctamente"
+        resultado = enc_mod.descifrar_archivo(datos_corruptos)
+        assert resultado == datos_corruptos  # fallback sin excepción
+
+        monkeypatch.delenv("DOCUMENT_ENCRYPTION_KEY")
+        reload(enc_mod)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TESTS: Anonimización de datos (anonymizer.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestAnonimizacion:
+    """Tests unitarios del módulo de anonimización de PII."""
+
+    def test_nombre_enmascarado(self):
+        from app.core.anonymizer import anonimizar_radicado
+        r = anonimizar_radicado({"nombre_razon_social": "Juan García", "nro_documento": "12345678"})
+        assert r["nombre_razon_social"] != "Juan García"
+        assert "J" in r["nombre_razon_social"]
+        assert "***" in r["nombre_razon_social"]
+
+    def test_documento_enmascarado(self):
+        from app.core.anonymizer import anonimizar_radicado
+        r = anonimizar_radicado({"nombre_razon_social": None, "nro_documento": "12345678"})
+        assert r["nro_documento"] != "12345678"
+        assert "5678" in r["nro_documento"]  # últimos 4 visibles
+        assert "****" in r["nro_documento"]
+
+    def test_email_enmascarado(self):
+        from app.core.anonymizer import anonimizar_radicado
+        r = anonimizar_radicado({"correo_electronico": "juan@empresa.com", "nro_documento": None})
+        assert r["correo_electronico"] != "juan@empresa.com"
+        assert "@" in r["correo_electronico"]
+
+    def test_campos_none_no_rompen(self):
+        from app.core.anonymizer import anonimizar_radicado
+        r = anonimizar_radicado({})
+        assert r.get("_anonimizado") is True
+
+    def test_endpoint_anonimizar_usuario_no_recibe_mascara(self, user_override):
+        res = user_override.get("/radicados?anonimizar=true")
+        assert res.status_code == 200
+        data = res.json()
+        items = data.get("items", data) if isinstance(data, dict) else data
+        # Rol 2 no debe recibir datos anonimizados aunque lo pida
+        assert not any(r.get("_anonimizado") for r in items if isinstance(r, dict))
+
+    def test_endpoint_anonimizar_admin_recibe_mascara(self, admin_override):
+        res = admin_override.get("/radicados?anonimizar=true")
+        assert res.status_code == 200
+        data = res.json()
+        items = data.get("items", data) if isinstance(data, dict) else data
+        # Admin con anonimizar=true debe recibir datos enmascarados
+        assert all(r.get("_anonimizado") is True for r in items if isinstance(r, dict))
+
+
+class TestMarcaAgua:
+    """Tests para el módulo de marca de agua dinámica (watermark.py)."""
+
+    def test_no_pdf_pasa_sin_cambios(self):
+        from app.core.watermark import aplicar_marca_agua
+        datos = b"esto es un archivo de texto plano"
+        resultado = aplicar_marca_agua(datos, "Juan", "192.168.1.1", "doc.txt")
+        assert resultado == datos
+
+    def test_pdf_invalido_pasa_sin_error(self):
+        from app.core.watermark import aplicar_marca_agua
+        # Contenido que empieza con %PDF pero está corrupto
+        datos = b"%PDF-1.4 contenido invalido"
+        resultado = aplicar_marca_agua(datos, "Juan", "192.168.1.1", "doc.pdf")
+        # Debe retornar algo (original o marcado) sin lanzar excepción
+        assert isinstance(resultado, bytes)
+
+    def test_pdf_valido_recibe_marca(self):
+        """Crea un PDF mínimo real y verifica que la marca de agua se aplica."""
+        import fitz
+        from app.core.watermark import aplicar_marca_agua
+
+        # Crear PDF mínimo en memoria
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        buf = doc.tobytes()
+        doc.close()
+
+        resultado = aplicar_marca_agua(buf, "Ana Pérez", "10.0.0.5", "test.pdf")
+
+        # El resultado debe ser un PDF válido con la marca aplicada
+        assert resultado[:4] == b"%PDF"
+        # Verificar que contiene el nombre de usuario en el PDF resultante
+        doc2 = fitz.open(stream=resultado, filetype="pdf")
+        texto = doc2.load_page(0).get_text()
+        doc2.close()
+        assert "Ana Pérez" in texto
+
+    def test_marca_agua_contiene_nombre_usuario(self):
+        """Verifica que el texto del usuario quede embebido en el PDF marcado."""
+        import fitz
+        from app.core.watermark import aplicar_marca_agua
+
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        buf = doc.tobytes()
+        doc.close()
+
+        resultado = aplicar_marca_agua(buf, "Carlos López", "172.16.0.1", "doc.pdf")
+
+        # Extraer texto del PDF resultante y verificar que contiene el nombre
+        doc2 = fitz.open(stream=resultado, filetype="pdf")
+        texto_total = "".join(p.get_text() for p in doc2)
+        doc2.close()
+        assert "Carlos López" in texto_total
+
+    def test_nombre_y_ip_multiples_paginas(self):
+        """La marca de agua debe aparecer en TODAS las páginas."""
+        import fitz
+        from app.core.watermark import aplicar_marca_agua
+
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        doc.new_page(width=595, height=842)
+        doc.new_page(width=595, height=842)
+        buf = doc.tobytes()
+        doc.close()
+
+        resultado = aplicar_marca_agua(buf, "María Ruiz", "192.168.0.10", "multi.pdf")
+
+        doc2 = fitz.open(stream=resultado, filetype="pdf")
+        assert doc2.page_count == 3
+        for pagina in doc2:
+            texto = pagina.get_text()
+            assert "María Ruiz" in texto
+        doc2.close()
