@@ -356,7 +356,7 @@
         </div>
 
         <div class="siade-row-2">
-          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="NIT">NIT</option></select></div>
+          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="Pasaporte">Pasaporte</option></select></div>
           <div><label class="siade-label">No. de Documento</label><input type="text" [(ngModel)]="radicado.nroDocRemitente" class="siade-input"></div>
         </div>
 
@@ -434,13 +434,13 @@
           <span class="error-msg" *ngIf="formSubmitted && erroresForm['asunto']">{{ erroresForm['asunto'] }}</span>
         </div>
         <div class="siade-row-2">
-          <div><label class="siade-label">Método Recepción</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Portal Web">Portal Web</option></select></div>
+          <div><label class="siade-label">Método Recepción</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Físico">Físico</option><option value="Correo Electrónico">Correo Electrónico</option><option value="Portal Web">Portal Web</option></select></div>
           <div><label class="siade-label">No. de Guía</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
         </div>
         <div class="siade-row-3">
-          <div><label class="siade-label">Días para dar respuesta</label><input type="number" [(ngModel)]="radicado.diasRespuesta" class="siade-input"></div>
-          <div><label class="siade-label">Fecha de Vencimiento</label><input type="text" [value]="radicado.fechaVencimiento" class="siade-input readonly" readonly></div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input"></div>
+          <div><label class="siade-label">Días para dar respuesta</label><input type="number" [(ngModel)]="radicado.diasRespuesta" (input)="onDiasRespuestaChange()" class="siade-input" min="1"></div>
+          <div><label class="siade-label">Fecha de Vencimiento</label><input type="text" [value]="radicado.fechaVencimiento" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
         </div>
       </div>
 
@@ -569,7 +569,7 @@
         </div>
 
         <div class="siade-row-2">
-          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="NIT">NIT</option></select></div>
+          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="Pasaporte">Pasaporte</option></select></div>
           <div><label class="siade-label">No. de Documento</label><input type="text" [(ngModel)]="radicado.nroDocRemitente" class="siade-input"></div>
         </div>
 
@@ -637,9 +637,9 @@
           <span class="error-msg" *ngIf="formSubmitted && erroresForm['asunto']">{{ erroresForm['asunto'] }}</span>
         </div>
         <div class="siade-row-3">
-          <div><label class="siade-label">Método de Envío</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Correo Certificado">Correo Certificado</option><option value="Portal Web">Portal Web</option></select></div>
+          <div><label class="siade-label">Método de Envío</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Físico">Físico</option><option value="Correo Electrónico">Correo Electrónico</option><option value="Correo Certificado">Correo Certificado</option><option value="Portal Web">Portal Web</option></select></div>
           <div><label class="siade-label">No. de Guía</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
         </div>
       </div>
 
@@ -788,7 +788,7 @@
         </div>
 
         <div class="siade-row-3">
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
           <div><label class="siade-label">Anexo</label><input type="text" class="siade-input"></div>
           <div><label class="siade-label">Descripción del Anexo</label><input type="text" class="siade-input"></div>
         </div>
@@ -886,11 +886,13 @@
           <div>
             <label class="siade-label">Método Recepción</label>
             <select [(ngModel)]="radicado.metodoRecepcion" class="siade-select">
-              <option value="Portal Web">Portal Web</option>
+              <option value="Físico">Físico</option>
+              <option value="Correo Electrónico">Correo Electrónico</option>
               <option value="Correo Certificado">Correo Certificado</option>
+              <option value="Portal Web">Portal Web</option>
             </select>
           </div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
           <div><label class="siade-label">No. Guía (Si aplica)</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
         </div>
         <div class="siade-row-2">
@@ -928,8 +930,8 @@
       </div>
 
       <div class="form-actions-footer">
-        <button class="btn-save-draft">💾 GUARDAR REGISTRO</button>
-        <button (click)="ejecutarRadicacion()" class="btn-radicate-blue" style="background: #64748b;">
+        <button class="btn-save-draft">💾 GUARDAR BORRADOR</button>
+        <button (click)="ejecutarRadicacion()" class="btn-radicate-blue" style="background: #ea580c;">
           <span class="icon">✔️</span> REGISTRAR CONTROL (NOR)
         </button>
       </div>
@@ -937,26 +939,34 @@
     </div>
 
     <aside class="preview-sidebar">
-      <div class="sticker-sticky-card">
-        <div class="sticker-header">
-          <span class="sticker-siade">SIADE</span>
-          <span class="sticker-entidad">Alcaldía de Manizales</span>
-          <span class="sticker-tipo">NO RADICABLE</span>
+      <!-- Preview NOR: sin QR ni código de barras -->
+      <div style="background: white; border-radius: 1.2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; width: 100%;">
+        <p style="text-align:center; font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 0.8rem 0 0; margin: 0;">Preview del Registro</p>
+
+        <!-- Ícono naranja -->
+        <div style="background: linear-gradient(135deg, #f97316, #ea580c); margin: 0.8rem auto; width: 80px; height: 80px; border-radius: 1rem; display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 2.2rem;">📄</span>
         </div>
-        <div class="sticker-numero">{{ obtenerPrefijo() }}-2026-{{ nroRadicadoSimulado }}</div>
-        <div class="sticker-qr-area">
-          <img *ngIf="qrPreviewUrl" [src]="qrPreviewUrl" alt="QR Radicado" class="sticker-qr-img">
-          <div *ngIf="!qrPreviewUrl" class="sticker-qr-placeholder">⏳</div>
+
+        <div style="text-align: center; padding: 0 1rem 1rem;">
+          <p style="font-size: 0.72rem; font-weight: 700; color: #64748b; margin: 0 0 0.3rem; text-transform: uppercase;">Alcaldía de Manizales</p>
+          <p style="font-size: 1.1rem; font-weight: 900; color: #ea580c; margin: 0 0 0.5rem; letter-spacing: 0.5px;">NOR-2026-{{ nroRadicadoSimulado }}</p>
+
+          <p style="font-size: 0.78rem; color: #475569; margin: 0 0 0.2rem;">
+            <strong>Remitente:</strong> {{ radicado.nombreRemitente || '---' }}
+          </p>
+          <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 0.6rem;">{{ fechaActualRadicado }}</p>
+
+          <p style="font-size: 0.7rem; font-weight: 800; color: #ea580c; letter-spacing: 1px; margin: 0 0 1rem;">SIN RADICADO</p>
+
+          <button (click)="ejecutarRadicacion()"
+                  style="width: 100%; padding: 0.7rem; background: linear-gradient(135deg, #f97316, #ea580c);
+                         color: white; border: none; border-radius: 0.8rem; font-weight: 700;
+                         font-size: 0.85rem; cursor: pointer; display: flex; align-items: center;
+                         justify-content: center; gap: 0.4rem;">
+            🖨️ Imprimir Registro
+          </button>
         </div>
-        <div *ngIf="barcodePreviewUrl" style="margin: 0.4rem 0 0; display: flex; justify-content: center;">
-          <img [src]="barcodePreviewUrl" alt="Código de barras" style="width: 90%; height: 36px; object-fit: fill;">
-        </div>
-        <div class="sticker-datos">
-          <div class="sticker-dato-row"><span class="sticker-dato-label">Remitente</span><span class="sticker-dato-val">{{ radicado.nombreRemitente || '---' }}</span></div>
-          <div class="sticker-dato-row"><span class="sticker-dato-label">Asunto</span><span class="sticker-dato-val">{{ radicado.asunto || '---' }}</span></div>
-          <div class="sticker-dato-row"><span class="sticker-dato-label">Fecha</span><span class="sticker-dato-val">{{ fechaActualRadicado }}</span></div>
-        </div>
-        <p class="sticker-aviso">Vista previa — se genera al radicar</p>
       </div>
     </aside>
   </div>
@@ -1265,14 +1275,17 @@
               <tr>
                 <th>Funcionario</th>
                 <th>Identificador</th>
+                <th>Correo</th>
                 <th>Rol</th>
                 <th>Estado</th>
-                <th style="text-align: center;">Acciones</th> </tr>
+                <th style="text-align: center;">Acciones</th>
+              </tr>
             </thead>
             <tbody>
               <tr *ngFor="let user of listaUsuarios">
                 <td>{{ user.nombre_completo || '⚠️ SIN NOMBRE ASIGNADO' }}</td>
                 <td style="color: #2563eb; font-family: monospace;">@{{ user.usuario }}</td>
+                <td style="color: #475569; font-size: 0.85rem;">{{ user.correo || '—' }}</td>
                 <td><span class="badge-siade">{{ getRoleName(user.rol_id) }}</span></td>
                 <td>
                   <span class="badge-siade" [ngClass]="user.activo ? 'status-activo' : 'status-suspendido'">
@@ -1579,14 +1592,19 @@
               <td>
                 <span class="badge-siade"
                   [ngStyle]="{
-                    'background': r.tipo_radicado === 'RECIBIDA' ? '#dbeafe' :
-                                  r.tipo_radicado === 'ENVIADA'  ? '#dcfce7' :
-                                  r.tipo_radicado === 'INTERNA'  ? '#fef9c3' : '#f1f5f9',
-                    'color':      r.tipo_radicado === 'RECIBIDA' ? '#1d4ed8' :
-                                  r.tipo_radicado === 'ENVIADA'  ? '#15803d' :
-                                  r.tipo_radicado === 'INTERNA'  ? '#854d0e' : '#475569'
+                    'background': (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? '#dbeafe' :
+                                  (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? '#dcfce7' :
+                                  (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? '#fef9c3' :
+                                  (r.tipo_radicado === 'NO-RADICABLE' || r.tipo_radicado === 'NO-RADICABLES') ? '#fce7f3' : '#f1f5f9',
+                    'color':      (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? '#1d4ed8' :
+                                  (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? '#15803d' :
+                                  (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? '#854d0e' :
+                                  (r.tipo_radicado === 'NO-RADICABLE' || r.tipo_radicado === 'NO-RADICABLES') ? '#9d174d' : '#475569'
                   }">
-                  {{ r.tipo_radicado }}
+                  {{ (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? 'RECIBIDA' :
+                     (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? 'ENVIADA'  :
+                     (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? 'INTERNA'  :
+                     (r.tipo_radicado === 'NO-RADICABLE' || r.tipo_radicado === 'NO-RADICABLES') ? 'NO RADICABLE' : r.tipo_radicado }}
                 </span>
               </td>
               <td>{{ r.nombre_razon_social || '---' }}</td>

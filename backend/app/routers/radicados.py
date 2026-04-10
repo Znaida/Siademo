@@ -192,7 +192,7 @@ async def ver_documento_radicado(
     contenido = descifrar_archivo(contenido_raw) if cifrado_activo() else contenido_raw
 
     # Aplicar marca de agua dinámica (solo PDFs; otros archivos pasan sin cambios)
-    contenido_final = aplicar_marca_agua(contenido, nombre_usuario, ip_cliente, filename)
+    contenido_final = aplicar_marca_agua(contenido, nombre_usuario, ip_cliente, filename, nro_radicado)
 
     registrar_evento(user_info['id'], 'DESCARGA_DOCUMENTO', 'RADICADOS', nro_radicado, request)
     return Response(

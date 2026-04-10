@@ -194,7 +194,7 @@ anexosBinarios: File[] = [];
       nombre: 'Usuario Productor',
       nivel: 'Nivel 2',
       color: '#d97706',
-      permisos: ['Aprobar y Trasladar documentos', 'Remitir y Archivar correspondencia', 'Devolver e Imprimir registros oficiales']
+      permisos: ['Radicar comunicaciones', 'Aprobar y Trasladar documentos', 'Remitir y Archivar correspondencia', 'Devolver e Imprimir registros oficiales']
     },
     {
       nombre: 'Usuario Consultor',
@@ -348,6 +348,7 @@ anexosBinarios: File[] = [];
   userParaAsignar: any = null;
 
   private auditSubscription?: Subscription;
+  private relojInterval?: ReturnType<typeof setInterval>;
 
   nuevoUser = {
     nombre: '',
@@ -381,16 +382,18 @@ anexosBinarios: File[] = [];
         this.userRoleName = this.getRoleName(this.userRole);
         this.userInitials = this.userName.substring(0, 1).toUpperCase();
 
-        // Inicializar fecha de radicación
-        const ahora = new Date();
-        this.fechaActualRadicado = ahora.toLocaleString('es-CO', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
+        // Reloj en tiempo real para la fecha de radicación
+        const actualizarReloj = () => {
+          this.fechaActualRadicado = new Date().toLocaleString('es-CO', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+          });
+        };
+        actualizarReloj();
+        this.relojInterval = setInterval(actualizarReloj, 1000);
+
+        // Inicializar fecha de vencimiento según días hábiles por defecto (15)
+        this.radicado.fechaVencimiento = this.calcularFechaVencimiento(this.radicado.diasRespuesta);
 
         // Generar QR de previsualización inicial
         this.actualizarQRPreview();
@@ -522,12 +525,21 @@ anexosBinarios: File[] = [];
     this.formSubmitted = true;
     if (!this.validarFormulario()) return;
 
-    // console.log("%c--- INICIANDO PROCESO DE RADICACIÓN OFICIAL ---", "color: #2563eb; font-weight: bold;");
+    // Normalizar campos de texto a mayúsculas antes de enviar
+    const camposTexto: (keyof typeof this.radicado)[] = [
+      'primerApellido', 'segundoApellido', 'nombreRemitente', 'cargo',
+      'telefono', 'direccion', 'asunto', 'nroGuia', 'anexoNombre',
+      'descripcionAnexo', 'conCopia', 'seccionResponsable',
+      'funcionarioResponsable', 'seccionOrigen', 'funcionarioOrigen'
+    ];
+    camposTexto.forEach(k => {
+      const v = this.radicado[k];
+      if (typeof v === 'string') (this.radicado as any)[k] = v.toUpperCase();
+    });
 
     // 3. Mapeo de Metadata: De Angular (CamelCase) a Python (SnakeCase)
     const metadata = {
-      //tipo_radicado: this.tabActivaVentanilla === 'recibidas' ? 'RECIBIDA' : 'ENVIADA',
-      tipo_radicado: this.tabActivaVentanilla.toUpperCase(), // Asegura INTERNA
+      tipo_radicado: ({ recibidas: 'RECIBIDA', enviadas: 'ENVIADA', internas: 'INTERNA', 'no-radicables': 'NO-RADICABLE' } as Record<string,string>)[this.tabActivaVentanilla] ?? 'NO-RADICABLE',
       tipo_remitente: this.radicado.tipoRemitente,
       primer_apellido: this.radicado.primerApellido,
       segundo_apellido: this.radicado.segundoApellido,
@@ -575,29 +587,58 @@ anexosBinarios: File[] = [];
     this.http.post<any>(`${this.apiUrl}/radicar`, formData)
       .subscribe({
         next: (res) => {
-          this.nroRadicadoSimulado = res.numero;
+          const nroGenerado = res.nro_radicado || res.numero || '—';
+          const esNOR = this.tabActivaVentanilla === 'no-radicables';
+          this.nroRadicadoSimulado = nroGenerado;
           this.limpiarFormularioRadicacion();
           this.obtenerEventos();
-          Swal.fire({
-            icon: 'success',
-            title: '¡Radicado Generado!',
-            html: `
-              <div style="text-align:left; font-family: 'Inter', sans-serif; line-height: 2;">
-                <p><strong>N° Radicado:</strong> <span style="color:#2563eb; font-size:1.1rem; font-weight:900;">${res.numero}</span></p>
-                <p><strong>Fecha Vencimiento:</strong> ${res.vencimiento}</p>
-              </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: '🖨️ Imprimir Sticker',
-            cancelButtonText: '← Volver',
-            confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#64748b',
-            allowOutsideClick: false,
-          }).then((result) => {
-            if (result.isConfirmed) {
-              this.imprimirStickerPDF(res.numero, res.vencimiento);
-            }
-          });
+          this.cargarRadicados();
+
+          if (esNOR) {
+            // NOR: mostrar confirmación simple con opción de imprimir registro
+            Swal.fire({
+              icon: 'success',
+              title: '✅ Registro Guardado',
+              html: `
+                <div style="text-align:center; font-family:'Inter',sans-serif; line-height:2;">
+                  <p style="color:#64748b; font-size:0.9rem;">Comunicación no radicable registrada</p>
+                  <p><span style="color:#ea580c; font-size:1.2rem; font-weight:900;">${nroGenerado}</span></p>
+                  <p style="font-size:0.78rem; color:#94a3b8;">SIN RADICADO — Solo control de recepción</p>
+                </div>
+              `,
+              showCancelButton: true,
+              confirmButtonText: '🖨️ Imprimir Registro',
+              cancelButtonText: '← Volver',
+              confirmButtonColor: '#ea580c',
+              cancelButtonColor: '#64748b',
+              allowOutsideClick: false,
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.imprimirRegistroNOR(nroGenerado);
+              }
+            });
+          } else {
+            Swal.fire({
+              icon: 'success',
+              title: '¡Radicado Generado!',
+              html: `
+                <div style="text-align:left; font-family: 'Inter', sans-serif; line-height: 2;">
+                  <p><strong>N° Radicado:</strong> <span style="color:#2563eb; font-size:1.1rem; font-weight:900;">${nroGenerado}</span></p>
+                  <p><strong>Fecha Vencimiento:</strong> ${res.vencimiento}</p>
+                </div>
+              `,
+              showCancelButton: true,
+              confirmButtonText: '🖨️ Imprimir Sticker',
+              cancelButtonText: '← Volver',
+              confirmButtonColor: '#2563eb',
+              cancelButtonColor: '#64748b',
+              allowOutsideClick: false,
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.imprimirStickerPDF(nroGenerado, res.vencimiento);
+              }
+            });
+          }
         },
         error: (err) => {
           console.error("Error en radicación:", err);
@@ -685,8 +726,124 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
     doc.setFont('helvetica', 'normal');
     doc.text(this.fechaActualRadicado, 25, 101);
 
-    doc.save(`sticker_${nroRadicado}.pdf`);
+    // Abrir diálogo de impresión (incluye opción "Guardar como PDF" en el navegador)
+    doc.autoPrint();
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const ventana = window.open(url, '_blank');
+    if (ventana) {
+      ventana.addEventListener('load', () => {
+        ventana.print();
+        URL.revokeObjectURL(url);
+      });
+    } else {
+      // Fallback si el navegador bloquea popups: descarga directa
+      doc.save(`sticker_${nroRadicado}.pdf`);
+      URL.revokeObjectURL(url);
+    }
   }
+
+// ── Registro NOR (sin QR, sin sticker) ──────────────────────────────────────
+imprimirRegistroNOR(nroRegistro: string) {
+  const doc = new jsPDF({ unit: 'mm', format: [80, 100] });
+
+  // Fondo naranja header
+  doc.setFillColor(234, 88, 12);
+  doc.rect(0, 0, 80, 20, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('S  I  A  D  E', 40, 8, { align: 'center' });
+  doc.setFontSize(5.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('REGISTRO DE COMUNICACIÓN NO RADICABLE', 40, 14, { align: 'center' });
+
+  // Ícono de documento (simulado con texto)
+  doc.setFontSize(22);
+  doc.setTextColor(249, 115, 22);
+  doc.text('📄', 40, 35, { align: 'center' });
+
+  // Entidad
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('ALCALDÍA DE MANIZALES', 40, 44, { align: 'center' });
+
+  // NOR número
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(234, 88, 12);
+  doc.text(nroRegistro, 40, 52, { align: 'center' });
+
+  // Datos
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Remitente: ${this.radicado.nombreRemitente || '---'}`, 40, 62, { align: 'center' });
+  doc.text(this.fechaActualRadicado, 40, 68, { align: 'center' });
+
+  // Etiqueta SIN RADICADO
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(234, 88, 12);
+  doc.text('SIN RADICADO', 40, 76, { align: 'center' });
+
+  // Línea separadora
+  doc.setDrawColor(226, 232, 240);
+  doc.line(5, 80, 75, 80);
+
+  doc.setFontSize(5.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Solo control de recepción — No genera trámite', 40, 86, { align: 'center' });
+
+  // Abrir diálogo de impresión
+  doc.autoPrint();
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const ventana = window.open(url, '_blank');
+  if (ventana) {
+    ventana.addEventListener('load', () => { ventana.print(); URL.revokeObjectURL(url); });
+  } else {
+    doc.save(`registro_nor_${nroRegistro}.pdf`);
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ── Días hábiles Colombia ────────────────────────────────────────────────────
+private readonly FESTIVOS_CO = new Set([
+  // 2025
+  '2025-01-01','2025-01-06','2025-03-24','2025-04-17','2025-04-18',
+  '2025-05-01','2025-06-02','2025-06-23','2025-06-30',
+  '2025-07-20','2025-08-07','2025-08-18','2025-10-13',
+  '2025-11-03','2025-11-17','2025-12-08','2025-12-25',
+  // 2026
+  '2026-01-01','2026-01-12','2026-03-23','2026-04-02','2026-04-03',
+  '2026-05-01','2026-05-18','2026-06-08','2026-06-15','2026-06-29',
+  '2026-07-20','2026-08-07','2026-08-17','2026-10-12',
+  '2026-11-02','2026-11-16','2026-12-08','2026-12-25',
+]);
+
+calcularFechaVencimiento(diasHabiles: number): string {
+  const fecha = new Date();
+  let contados = 0;
+  while (contados < diasHabiles) {
+    fecha.setDate(fecha.getDate() + 1);
+    const diaSemana = fecha.getDay(); // 0=Dom, 6=Sab
+    const iso = fecha.toISOString().slice(0, 10);
+    if (diaSemana !== 0 && diaSemana !== 6 && !this.FESTIVOS_CO.has(iso)) {
+      contados++;
+    }
+  }
+  return fecha.toISOString().slice(0, 10);
+}
+
+onDiasRespuestaChange() {
+  const dias = Number(this.radicado.diasRespuesta);
+  if (dias > 0) {
+    this.radicado.fechaVencimiento = this.calcularFechaVencimiento(dias);
+  }
+}
 
 // Función auxiliar para limpiar tras el éxito
 limpiarFormularioRadicacion() {
@@ -1727,9 +1884,8 @@ limpiarFormularioRadicacion() {
     const roles: { [key: number]: string } = {
       0: 'Super Administrador',
       1: 'Administrador',
-      2: 'Archivista (TRD)',
-      3: 'Radicador',
-      4: 'Consultor'
+      2: 'Usuario Productor',
+      3: 'Usuario Consultor'
     };
     return roles[rolId] || 'Funcionario SIADE';
   }
@@ -2166,6 +2322,9 @@ limpiarFormularioRadicacion() {
   }
 
   ngOnDestroy() {
+    if (this.relojInterval) {
+      clearInterval(this.relojInterval);
+    }
     if (this.auditSubscription) {
       this.auditSubscription.unsubscribe();
     }

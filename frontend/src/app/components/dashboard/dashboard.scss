@@ -258,6 +258,12 @@ main {
   &:focus { border-color: $primary-blue; background: white; }
 }
 
+// Mayúsculas automáticas en campos de texto de formularios
+input.siade-input:not([readonly]):not([type="number"]),
+textarea.siade-input {
+  text-transform: uppercase;
+}
+
 // Estilo específico para los cuadros de texto largos
 textarea.siade-input {
   resize: none;

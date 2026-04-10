@@ -386,7 +386,7 @@ def inicializar_db():
 
 def _migrar_columnas_sqlite(conn, cur):
     """Agrega columnas faltantes en SQLite (soporte migraciones incrementales)."""
-    for col, tipo in [("debe_cambiar_password", "INTEGER DEFAULT 0")]:
+    for col, tipo in [("debe_cambiar_password", "INTEGER DEFAULT 0"), ("correo", "TEXT")]:
         try:
             cur.execute(f"ALTER TABLE usuarios ADD COLUMN {col} {tipo}")
             conn.commit()

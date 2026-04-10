@@ -26,20 +26,218 @@ USUARIOS = [
 ]
 
 DEPENDENCIAS = [
-    ("KronosZnd", "Dirección General",      "Despacho del Director",    None),
-    ("KronosZnd", "Dirección General",      "Secretaría General",       "Despacho del Director"),
-    ("KronosZnd", "Subdirección Técnica",   "Área de Sistemas",         "Dirección General"),
-    ("KronosZnd", "Subdirección Técnica",   "Área de Archivo",          "Dirección General"),
-    ("KronosZnd", "Subdirección Jurídica",  "Área Legal",               "Dirección General"),
+    # Sección 100 — Despacho del Contralor Municipal
+    ("Contraloría de Rionegro", "Despacho del Contralor Municipal",
+     "Despacho del Contralor Municipal", None),
+    # Subsección 101
+    ("Contraloría de Rionegro", "Despacho del Contralor Municipal",
+     "Oficina Asesora de Control Interno", "Despacho del Contralor Municipal"),
+    # Subsección 102
+    ("Contraloría de Rionegro", "Despacho del Contralor Municipal",
+     "Oficina Asesora Jurídica", "Despacho del Contralor Municipal"),
+    # Sección 110 — Subcontraloría
+    ("Contraloría de Rionegro", "Subcontraloría",
+     "Subcontraloría", None),
+    # Sección 120 — Contraloría Auxiliar de Vigilancia y Control
+    ("Contraloría de Rionegro", "Contraloría Auxiliar de Vigilancia y Control",
+     "Contraloría Auxiliar de Vigilancia y Control", None),
+    # Subsección 121
+    ("Contraloría de Rionegro", "Contraloría Auxiliar de Vigilancia y Control",
+     "Dirección de Auditorías", "Contraloría Auxiliar de Vigilancia y Control"),
+    # Sección 130 — Contraloría Auxiliar de Responsabilidad Fiscal y Jurisdicción Coactiva
+    ("Contraloría de Rionegro", "Contraloría Auxiliar de Responsabilidad Fiscal y Jurisdicción Coactiva",
+     "Contraloría Auxiliar de Responsabilidad Fiscal y Jurisdicción Coactiva", None),
 ]
 
 TIPOS = ["RECIBIDA", "ENVIADA", "INTERNA", "NO-RADICABLE"]
 ESTADOS = ["Radicado", "En Trámite", "Archivado", "Trasladado"]
 SERIES = [
-    ("01", "Actas",        "01-01", "Actas de Reunión"),
-    ("02", "Contratos",    "02-01", "Contratos de Prestación"),
-    ("03", "Informes",     "03-01", "Informes de Gestión"),
-    ("04", "Comunicados",  "04-01", "Comunicados Internos"),
+    # 01 — ACCIONES CONSTITUCIONALES
+    ("01", "Acciones Constitucionales",     "01-01", "Acciones de Cumplimiento"),
+    ("01", "Acciones Constitucionales",     "01-02", "Acciones de Tutela"),
+    # 02 — ACTAS
+    ("02", "Actas",  "02-01", "Actas de Brigada de Emergencia"),
+    ("02", "Actas",  "02-02", "Actas de Comité de Conciliación"),
+    ("02", "Actas",  "02-03", "Actas de Comité de Contratación"),
+    ("02", "Actas",  "02-04", "Actas de Comité de Control Social"),
+    ("02", "Actas",  "02-05", "Actas de Comité de Convivencia Laboral"),
+    ("02", "Actas",  "02-06", "Actas de Comité Institucional de Coordinación de Control Interno"),
+    ("02", "Actas",  "02-07", "Actas de Comité Institucional de Gestión y Desempeño"),
+    ("02", "Actas",  "02-08", "Actas de Comité Paritario de Seguridad y Salud en el Trabajo"),
+    ("02", "Actas",  "02-09", "Actas de Comité Técnico de Auditorías"),
+    ("02", "Actas",  "02-10", "Actas de Comité Técnico de Sostenibilidad de la Información Financiera"),
+    ("02", "Actas",  "02-11", "Actas de Eliminación Documental"),
+    ("02", "Actas",  "02-12", "Actas de Reuniones Internas entre Dependencias"),
+    # 03 — ACTOS ADMINISTRATIVOS
+    ("03", "Actos Administrativos",         "03-01", "Resoluciones"),
+    # 04 — AUDITORÍAS TERRITORIALES
+    ("04", "Auditorías Territoriales",      "04-01", "Auditorías de Actuación Especial de Fiscalización - AEF"),
+    ("04", "Auditorías Territoriales",      "04-02", "Auditorías de Cumplimiento - AC"),
+    ("04", "Auditorías Territoriales",      "04-03", "Auditorías de Desempeño - AD"),
+    ("04", "Auditorías Territoriales",      "04-04", "Auditorías Financieras de Gestión y Resultados - AFGR"),
+    # 05 — CIRCULARES
+    ("05", "Circulares",                    "05-01", "Circulares Dispositivas"),
+    ("05", "Circulares",                    "05-02", "Circulares Informativas"),
+    # 06 — COMPROBANTES CONTABLES
+    ("06", "Comprobantes Contables",        "06-01", "Comprobantes Contables de Egresos"),
+    ("06", "Comprobantes Contables",        "06-02", "Comprobantes Contables de Ingresos"),
+    # 07 — COMPROBANTES DE ALMACÉN
+    ("07", "Comprobantes de Almacén",       "07-01", "Comprobantes de Baja de Bienes de Almacén"),
+    ("07", "Comprobantes de Almacén",       "07-02", "Comprobantes de Egreso de Bienes de Almacén"),
+    ("07", "Comprobantes de Almacén",       "07-03", "Comprobantes de Ingreso de Bienes de Almacén"),
+    # 08 — CONCEPTOS
+    ("08", "Conceptos",                     "08-01", "Conceptos Jurídicos"),
+    # 09 — CONCILIACIONES BANCARIAS (sin subserie)
+    ("09", "Conciliaciones Bancarias",      "",      ""),
+    # 10 — CONSECUTIVOS DE COMUNICACIONES OFICIALES
+    ("10", "Consecutivos de Comunicaciones Oficiales", "10-01", "Enviadas"),
+    ("10", "Consecutivos de Comunicaciones Oficiales", "10-02", "Internas"),
+    ("10", "Consecutivos de Comunicaciones Oficiales", "10-03", "Recibidas"),
+    # 11 — CONTRATOS
+    ("11", "Contratos",  "11-01", "Contratos de Arrendamiento"),
+    ("11", "Contratos",  "11-02", "Contratos de Comodato"),
+    ("11", "Contratos",  "11-03", "Contratos de Compraventa"),
+    ("11", "Contratos",  "11-04", "Contratos de Consultoría"),
+    ("11", "Contratos",  "11-05", "Contratos de Obras"),
+    ("11", "Contratos",  "11-06", "Contratos de Prestación de Servicios"),
+    ("11", "Contratos",  "11-07", "Contratos de Seguros"),
+    ("11", "Contratos",  "11-08", "Contratos de Suministros"),
+    ("11", "Contratos",  "11-09", "Contratos Interadministrativos"),
+    ("11", "Contratos",  "11-10", "Contratos Urgencia Manifiesta"),
+    # 12 — CONVENIOS
+    ("12", "Convenios",  "12-01", "Convenios de Organización o Asociación"),
+    ("12", "Convenios",  "12-02", "Convenios de Cooperación Nacional"),
+    ("12", "Convenios",  "12-03", "Convenios Interadministrativos"),
+    ("12", "Convenios",  "12-04", "Convenios Interinstitucionales"),
+    # 13 — DECLARACIONES TRIBUTARIAS (sin subserie)
+    ("13", "Declaraciones Tributarias",     "",      ""),
+    # 14 — DERECHOS DE PETICIÓN (sin subserie)
+    ("14", "Derechos de Petición",          "",      ""),
+    # 15 — ESTADOS FINANCIEROS (sin subserie)
+    ("15", "Estados Financieros",           "",      ""),
+    # 16 — HISTORIALES DE BIENES INMUEBLES (sin subserie)
+    ("16", "Historiales de Bienes Inmuebles", "",    ""),
+    # 17 — HISTORIALES DE MAQUINARIA Y EQUIPOS (sin subserie)
+    ("17", "Historiales de Maquinaria y Equipos", "", ""),
+    # 18 — HISTORIALES DE VEHÍCULOS (sin subserie)
+    ("18", "Historiales de Vehículos",      "",      ""),
+    # 19 — HISTORIAS LABORALES (sin subserie)
+    ("19", "Historias Laborales",           "",      ""),
+    # 20 — INFORMES
+    ("20", "Informes",   "20-01", "Informes a Entes de Control"),
+    ("20", "Informes",   "20-02", "Informes de Austeridad de Gasto"),
+    ("20", "Informes",   "20-03", "Informes de Conciliación y Defensa Jurídica"),
+    ("20", "Informes",   "20-04", "Informes de Ejecución Presupuestal"),
+    ("20", "Informes",   "20-05", "Informes de Gestión"),
+    ("20", "Informes",   "20-06", "Informes de Revisión de la Cuenta"),
+    ("20", "Informes",   "20-07", "Informes de Seguimiento a los Derechos de Petición"),
+    ("20", "Informes",   "20-08", "Informes de Seguimiento al Plan Anticorrupción y Atención al Ciudadano"),
+    ("20", "Informes",   "20-09", "Informes de Seguimiento de Control Interno"),
+    ("20", "Informes",   "20-10", "Informes de Seguimiento de la Segunda Línea de Defensa"),
+    ("20", "Informes",   "20-11", "Informe del Estado de Control Interno"),
+    ("20", "Informes",   "20-12", "Informes del Sistema de Gestión Seguridad y Salud en el Trabajo"),
+    ("20", "Informes",   "20-13", "Informes del Tesoro y del Presupuesto"),
+    ("20", "Informes",   "20-14", "Informes sobre el Estado de las Finanzas"),
+    ("20", "Informes",   "20-15", "Informes sobre el Estado de los Recursos Naturales y del Medio Ambiente"),
+    ("20", "Informes",   "20-16", "Informes Trimestrales de Seguimiento al MIPG"),
+    # 21 — INSTRUMENTOS ARCHIVÍSTICOS
+    ("21", "Instrumentos Archivísticos",    "21-01", "Bancos Terminológicos de Series y Subseries Documentales"),
+    ("21", "Instrumentos Archivísticos",    "21-02", "Cuadros de Clasificación Documental - CCD"),
+    ("21", "Instrumentos Archivísticos",    "21-03", "Inventarios Documentales de Archivo Central"),
+    ("21", "Instrumentos Archivísticos",    "21-04", "Planes Institucionales de Archivos - PINAR"),
+    ("21", "Instrumentos Archivísticos",    "21-05", "Programas de Gestión Documental - PGD"),
+    ("21", "Instrumentos Archivísticos",    "21-06", "Tablas de Control de Acceso"),
+    ("21", "Instrumentos Archivísticos",    "21-07", "Tablas de Retención Documental - TRD"),
+    ("21", "Instrumentos Archivísticos",    "21-08", "Tablas de Valoración Documental - TVD"),
+    # 22 — INSTRUMENTOS DE CONTROL
+    ("22", "Instrumentos de Control",       "22-01", "De Almacén"),
+    ("22", "Instrumentos de Control",       "22-02", "De Ausentismo Laboral"),
+    ("22", "Instrumentos de Control",       "22-03", "De Comunicaciones Oficiales"),
+    ("22", "Instrumentos de Control",       "22-04", "De Préstamo de Tecnología"),
+    ("22", "Instrumentos de Control",       "22-05", "De Préstamos y Consulta de Documentos"),
+    ("22", "Instrumentos de Control",       "22-06", "De Publicación de la Información en la Sede Electrónica"),
+    # 23 — INSTRUMENTOS DE GESTIÓN DE LA INFORMACIÓN PÚBLICA
+    ("23", "Instrumentos de Gestión de la Información Pública", "23-01", "Esquemas de Publicación de Información"),
+    ("23", "Instrumentos de Gestión de la Información Pública", "23-02", "Índices de Información Clasificada y Reservada"),
+    ("23", "Instrumentos de Gestión de la Información Pública", "23-03", "Registros de Activos de Información"),
+    # 24 — LIBROS CONTABLES AUXILIARES (sin subserie)
+    ("24", "Libros Contables Auxiliares",   "",      ""),
+    # 25 — LIBROS CONTABLES PRINCIPALES
+    ("25", "Libros Contables Principales",  "25-01", "Libro Diario"),
+    ("25", "Libros Contables Principales",  "25-02", "Libro Mayor"),
+    # 26 — MANUALES
+    ("26", "Manuales",   "26-01", "Manuales de Atención al Usuario"),
+    ("26", "Manuales",   "26-02", "Manuales de Contratación y Supervisión"),
+    ("26", "Manuales",   "26-03", "Manuales de Imagen Corporativa"),
+    ("26", "Manuales",   "26-04", "Manuales de Políticas Contables y de Operación"),
+    ("26", "Manuales",   "26-05", "Manuales de Procesos y Procedimientos"),
+    ("26", "Manuales",   "26-06", "Manuales de Publicación de Información Mínima Requerida"),
+    ("26", "Manuales",   "26-07", "Manuales del Código de Integridad"),
+    ("26", "Manuales",   "26-08", "Manuales del Sistema de Gestión de Calidad"),
+    ("26", "Manuales",   "26-09", "Manuales Específicos de Funciones, Requisitos y Competencias Laborales"),
+    ("26", "Manuales",   "26-10", "Manuales para el Cumplimiento de la Normativa Aplicable a la Contraloría"),
+    # 27 — NÓMINA (sin subserie)
+    ("27", "Nómina",                        "",      ""),
+    # 28 — PLANES
+    ("28", "Planes",     "28-01", "Planes Anticorrupción y Atención al Ciudadano"),
+    ("28", "Planes",     "28-02", "Planes Anuales de Adquisiciones"),
+    ("28", "Planes",     "28-03", "Planes Anuales de Empleos Vacantes"),
+    ("28", "Planes",     "28-04", "Planes de Acción Institucional"),
+    ("28", "Planes",     "28-05", "Planes de Auditorías"),
+    ("28", "Planes",     "28-06", "Planes de Bienestar Laboral, Estímulos e Incentivos Institucionales"),
+    ("28", "Planes",     "28-07", "Planes de Comunicaciones"),
+    ("28", "Planes",     "28-08", "Planes de Conservación Documental"),
+    ("28", "Planes",     "28-09", "Planes de Mejoramiento Institucional"),
+    ("28", "Planes",     "28-10", "Planes de Participación Ciudadana"),
+    ("28", "Planes",     "28-11", "Planes de Preservación Digital a Largo Plazo"),
+    ("28", "Planes",     "28-12", "Planes de Prevención, Preparación y Respuesta ante Emergencias"),
+    ("28", "Planes",     "28-13", "Planes de Previsión de Recursos Humanos"),
+    ("28", "Planes",     "28-14", "Planes de Seguridad y Privacidad de la Información"),
+    ("28", "Planes",     "28-15", "Planes de Trabajo Anual del SG-SST"),
+    ("28", "Planes",     "28-16", "Planes de Transferencias Documentales"),
+    ("28", "Planes",     "28-17", "Planes de Tratamientos de Riesgos de Seguridad y Privacidad de la Información"),
+    ("28", "Planes",     "28-18", "Planes de Trabajo de Contralores Estudiantiles"),
+    ("28", "Planes",     "28-19", "Planes de Vigilancia y Control Fiscal Territorial"),
+    ("28", "Planes",     "28-20", "Planes Estratégicos de Talento Humano - PETH"),
+    ("28", "Planes",     "28-21", "Planes Estratégicos de TIC - PETI"),
+    ("28", "Planes",     "28-22", "Planes Estratégicos Institucionales"),
+    ("28", "Planes",     "28-23", "Planes Generales de Auditorías Territoriales"),
+    ("28", "Planes",     "28-24", "Planes Institucionales de Capacitación - PIC"),
+    # 29 — POLÍTICAS
+    ("29", "Políticas",  "29-01", "Políticas de Gestión Ambiental"),
+    ("29", "Políticas",  "29-02", "Políticas de Gestión de la Calidad"),
+    ("29", "Políticas",  "29-03", "Políticas de Gestión del Riesgo"),
+    ("29", "Políticas",  "29-04", "Políticas de Gestión Documental"),
+    ("29", "Políticas",  "29-05", "Políticas de Habeas Data"),
+    ("29", "Políticas",  "29-06", "Políticas de Integridad"),
+    ("29", "Políticas",  "29-07", "Políticas de Tratamientos de Riesgos de Seguridad y Privacidad de la Información"),
+    ("29", "Políticas",  "29-08", "Políticas de Seguridad y Salud en el Trabajo"),
+    # 30 — PROCESOS ADMINISTRATIVOS SANCIONATORIOS FISCALES (sin subserie)
+    ("30", "Procesos Administrativos Sancionatorios Fiscales", "", ""),
+    # 31 — PROCESOS CONTRACTUALES DECLARADOS DESIERTOS (sin subserie)
+    ("31", "Procesos Contractuales Declarados Desiertos",      "", ""),
+    # 32 — PROCESOS JURÍDICOS
+    ("32", "Procesos Jurídicos",            "32-01", "Procesos Contenciosos Administrativos"),
+    ("32", "Procesos Jurídicos",            "32-02", "Procesos Disciplinarios"),
+    # 33 — PROCESOS JURISDICCIÓN COACTIVA (sin subserie)
+    ("33", "Procesos Jurisdicción Coactiva", "",     ""),
+    # 34 — PROCESOS RESPONSABILIDAD FISCAL
+    ("34", "Procesos Responsabilidad Fiscal", "34-01", "Procesos Responsabilidad Fiscal Ordinario"),
+    ("34", "Procesos Responsabilidad Fiscal", "34-02", "Procesos Responsabilidad Fiscal Verbal"),
+    # 35 — PROGRAMAS
+    ("35", "Programas",                     "35-01", "Programas Anuales Mensualizados de Caja - PAC"),
+    # 36 — REGISTROS DE OPERACIONES DE CAJA MENOR (sin subserie)
+    ("36", "Registros de Operaciones de Caja Menor",           "", ""),
+    # 37 — REGLAMENTOS INTERNOS DE RECAUDO DE CARTERA (sin subserie)
+    ("37", "Reglamentos Internos de Recaudo de Cartera",       "", ""),
+    # 38 — REGLAMENTOS INTERNOS DE TRABAJO (sin subserie)
+    ("38", "Reglamentos Internos de Trabajo",                  "", ""),
+    # 39 — REPORTES DE ACCIDENTE DE TRABAJO (sin subserie)
+    ("39", "Reportes de Accidente de Trabajo",                 "", ""),
+    # 40 — REPORTES DE INFORMACIÓN EXÓGENA (sin subserie)
+    ("40", "Reportes de Información Exógena",                  "", ""),
+    # 41 — SOLICITUDES SGC (sin subserie)
+    ("41", "Solicitudes de Elaboración, Modificación o Eliminación de la Documentación del SGC", "", ""),
 ]
 REMITENTES = [
     ("PERSONA_NATURAL", "García",    "Juan",   "CC", "12345678"),
@@ -260,8 +458,8 @@ def main():
         print("\n✅ Seed completado exitosamente!")
         print("   Usuarios creados:", len(USUARIOS))
         print("   Radicados creados: 30")
-        print("   Dependencias: 5")
-        print("   TRD: 4 series")
+        print(f"   Dependencias: {len(DEPENDENCIAS)}")
+        print(f"   TRD: {len(SERIES)} series/subseries")
         print("\n   Credenciales de prueba:")
         print("   - admin / Admin2026 (administrador)")
         for u, p, n, r in USUARIOS:

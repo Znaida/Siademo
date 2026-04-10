@@ -41,12 +41,12 @@ def listar_usuarios() -> list:
         agg_fn = "STRING_AGG(e.nombre, ', ')" if is_postgres() else "GROUP_CONCAT(e.nombre, ', ')"
         cur.execute(f"""
             SELECT u.id, u.usuario, u.nombre_completo, u.rol_id, u.activo,
-                   {agg_fn} AS grupos
+                   u.correo, {agg_fn} AS grupos
             FROM usuarios u
             LEFT JOIN usuario_equipo ue ON u.id = ue.usuario_id
             LEFT JOIN equipos e ON ue.equipo_id = e.id
             WHERE u.rol_id != 0
-            GROUP BY u.id, u.usuario, u.nombre_completo, u.rol_id, u.activo
+            GROUP BY u.id, u.usuario, u.nombre_completo, u.rol_id, u.activo, u.correo
             ORDER BY u.rol_id, u.nombre_completo
         """)
         return [dict(r) for r in cur.fetchall()]
