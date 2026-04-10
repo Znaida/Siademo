@@ -240,6 +240,38 @@ async def listar_usuarios(admin_info: dict = Depends(obtener_admin_actual)):
     return crud_listar_usuarios()
 
 
+@router.get("/catalogo-series")
+async def listar_series():
+    """Retorna todas las series del catálogo documental. Público (sin auth) para los formularios."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT cod_serie, nombre_serie FROM catalogo_series ORDER BY cod_serie")
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/catalogo-subseries")
+async def listar_subseries(cod_serie: str = ""):
+    """Retorna subseries del catálogo, filtradas por cod_serie si se pasa."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if cod_serie:
+            cur.execute(
+                "SELECT cod_subserie, nombre_subserie, cod_serie FROM catalogo_subseries WHERE cod_serie = ? ORDER BY cod_subserie",
+                (cod_serie,)
+            )
+        else:
+            cur.execute("SELECT cod_subserie, nombre_subserie, cod_serie FROM catalogo_subseries ORDER BY cod_serie, cod_subserie")
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.get("/kpi-dashboard")
 async def obtener_kpi_dashboard(admin_info: dict = Depends(obtener_admin_actual)):
     """KPIs para las tarjetas del Panel de Control."""

@@ -234,9 +234,9 @@ anexosBinarios: File[] = [];
     llaves: ['', '', '', ''] // Llaves de búsqueda dinámicas capturadas
   };
 
-  listaTRD: any[] = [
-    { codigo: '1.01', unidad: 'Gerencia', serie: 'Acciones Constitucionales', subserie: 'Acciones de Tutela', soporte: 'Papel', ag: 2, ac: 20, disposicion: 'Eliminación' }
-  ];
+  listaTRD: any[] = [];
+  catalogoSeries: any[] = [];
+  catalogoSubseries: any[] = [];
   
   // --- CONTROL DE INTERFAZ (Modales) ---
   mostrarFormularioCrear: boolean = false; 
@@ -401,6 +401,7 @@ anexosBinarios: File[] = [];
         // Carga inicial de datos persistentes
         this.cargarEstructura();
         this.cargarTRD();
+        this.cargarCatalogoSeries();
         this.cargarListaGrupos();
         this.cargarUsuariosActivos();
         this.cargarNotificaciones();
@@ -903,11 +904,39 @@ limpiarFormularioRadicacion() {
       .subscribe({
         next: (res) => {
           this.listaTRD = res;
-          console.log("TRD Cargada para el formulario:", this.listaTRD); // <--- Mira esto en F12
           this.cd.detectChanges();
         },
-        error: () => console.warn("Error al cargar TRD para la ventanilla.")
+        error: () => console.warn("Error al cargar TRD.")
       });
+  }
+
+  cargarCatalogoSeries() {
+    this.http.get<any[]>(`${this.apiUrl}/admin/catalogo-series`)
+      .subscribe({
+        next: (res) => {
+          this.catalogoSeries = res;
+          this.cd.detectChanges();
+        },
+        error: () => console.warn("Error al cargar catálogo de series.")
+      });
+  }
+
+  onSerieChange() {
+    const serieSeleccionada = this.catalogoSeries.find(
+      s => s.nombre_serie === this.radicado.serie
+    );
+    this.radicado.subserie = '';
+    this.catalogoSubseries = [];
+    if (serieSeleccionada) {
+      this.http.get<any[]>(`${this.apiUrl}/admin/catalogo-subseries?cod_serie=${serieSeleccionada.cod_serie}`)
+        .subscribe({
+          next: (res) => {
+            this.catalogoSubseries = res;
+            this.cd.detectChanges();
+          },
+          error: () => console.warn("Error al cargar subseries.")
+        });
+    }
   }
 
   agregarALaTRD() {
@@ -1682,30 +1711,17 @@ limpiarFormularioRadicacion() {
 
   // ----- SERIES Y SUBSERIES CREADAS POR TRD
   getSeriesUnicas() {
-    if (!this.listaTRD || this.listaTRD.length === 0) return [];
-    const seriesMap = new Map();
-    this.listaTRD.forEach(item => {
-      const nom = (item.serie || '').toString().trim();
-      const cod = (item.codigo || '').toString().trim();
-      if (nom) seriesMap.set(nom, `${cod} - ${nom}`);
-    });
-    return Array.from(seriesMap.entries()).map(([nombre, etiqueta]) => ({ nombre, etiqueta }));
+    return this.catalogoSeries.map(s => ({
+      nombre: s.nombre_serie,
+      etiqueta: `${s.cod_serie} - ${s.nombre_serie}`
+    }));
   }
 
   getSubseriesUnicas() {
-    if (!this.radicado.serie || !this.listaTRD) return [];
-    const subseriesMap = new Map();
-    this.listaTRD
-      .filter(item => (item.serie || '').toString() === this.radicado.serie.toString())
-      .forEach(item => {
-        const nom = (item.subserie || '').toString().trim();
-        const cod = (item.cod_subserie || '').toString().trim(); // ¡Ya existe!
-        if (nom) {
-          const etiqueta = cod ? `${cod} - ${nom}` : nom;
-          subseriesMap.set(nom, etiqueta);
-        }
-      });
-    return Array.from(subseriesMap.entries()).map(([nombre, etiqueta]) => ({ nombre, etiqueta }));
+    return this.catalogoSubseries.map(sub => ({
+      nombre: sub.nombre_subserie,
+      etiqueta: `${sub.cod_subserie} - ${sub.nombre_subserie}`
+    }));
   }
 
   getTiposDocumentalesUnicos() {

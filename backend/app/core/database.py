@@ -306,6 +306,18 @@ def inicializar_db():
             creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             modificado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
+        # Catálogos de Series y Subseries documentales
+        f"""CREATE TABLE IF NOT EXISTS catalogo_series (
+            id {pk},
+            cod_serie TEXT NOT NULL UNIQUE,
+            nombre_serie TEXT NOT NULL
+        )""",
+        f"""CREATE TABLE IF NOT EXISTS catalogo_subseries (
+            id {pk},
+            cod_subserie TEXT NOT NULL,
+            nombre_subserie TEXT NOT NULL,
+            cod_serie TEXT NOT NULL
+        )""",
         # Recuperación de contraseña — tokens temporales
         f"""CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id {pk},

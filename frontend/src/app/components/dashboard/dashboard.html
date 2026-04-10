@@ -399,7 +399,7 @@
         <div class="siade-row-3">
           <div>
             <label class="siade-label">Serie <span style="color:#ef4444">*</span></label>
-              <select [(ngModel)]="radicado.serie" (change)="radicado.subserie=''; radicado.tipoDocumental=''" [class.campo-error]="formSubmitted && erroresForm['serie']" class="siade-select">
+              <select [(ngModel)]="radicado.serie" (change)="onSerieChange(); radicado.tipoDocumental=''" [class.campo-error]="formSubmitted && erroresForm['serie']" class="siade-select">
                 <option value="">-- Seleccione Serie --</option>
                 <option *ngFor="let s of getSeriesUnicas()" [value]="s.nombre">
                   {{ s.etiqueta }}
@@ -602,7 +602,7 @@
         <div class="siade-row-3">
           <div>
             <label class="siade-label">Serie <span style="color:#ef4444">*</span></label>
-              <select [(ngModel)]="radicado.serie" (change)="radicado.subserie=''; radicado.tipoDocumental=''" [class.campo-error]="formSubmitted && erroresForm['serie']" class="siade-select">
+              <select [(ngModel)]="radicado.serie" (change)="onSerieChange(); radicado.tipoDocumental=''" [class.campo-error]="formSubmitted && erroresForm['serie']" class="siade-select">
                 <option value="">-- Seleccione Serie --</option>
                 <option *ngFor="let s of getSeriesUnicas()" [value]="s.nombre">
                   {{ s.etiqueta }}
@@ -754,7 +754,7 @@
           <div class="siade-row-3">
 <div>
             <label class="siade-label">Serie</label>
-              <select [(ngModel)]="radicado.serie" (change)="radicado.subserie=''; radicado.tipoDocumental=''" class="siade-select">
+              <select [(ngModel)]="radicado.serie" (change)="onSerieChange(); radicado.tipoDocumental=''" class="siade-select">
                 <option value="">-- Seleccione Serie --</option>
                 <option *ngFor="let s of getSeriesUnicas()" [value]="s.nombre">
                   {{ s.etiqueta }}
