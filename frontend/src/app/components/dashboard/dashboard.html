@@ -939,26 +939,50 @@
     </div>
 
     <aside class="preview-sidebar">
-      <!-- Preview NOR: sin QR ni código de barras -->
-      <div style="background: white; border-radius: 1.2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; width: 100%;">
-        <p style="text-align:center; font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 0.8rem 0 0; margin: 0;">Preview del Registro</p>
+      <div class="sticker-sticky-card">
 
-        <!-- Ícono naranja -->
-        <div style="background: linear-gradient(135deg, #f97316, #ea580c); margin: 0.8rem auto; width: 80px; height: 80px; border-radius: 1rem; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 2.2rem;">📄</span>
+        <!-- Header naranja estilo NOR -->
+        <div class="sticker-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+          <span class="sticker-siade" style="color: white; letter-spacing: 6px;">SIADE</span>
+          <span class="sticker-entidad">Alcaldía de Manizales</span>
+          <span class="sticker-tipo" style="background: rgba(255,255,255,0.25); color: white;">COMUNICACIONES NO RADICABLES</span>
         </div>
 
-        <div style="text-align: center; padding: 0 1rem 1rem;">
-          <p style="font-size: 0.72rem; font-weight: 700; color: #64748b; margin: 0 0 0.3rem; text-transform: uppercase;">Alcaldía de Manizales</p>
-          <p style="font-size: 1.1rem; font-weight: 900; color: #ea580c; margin: 0 0 0.5rem; letter-spacing: 0.5px;">NOR-2026-{{ nroRadicadoSimulado }}</p>
+        <!-- Ícono documento naranja -->
+        <div style="display: flex; justify-content: center; padding: 0.9rem 0 0.5rem;">
+          <div style="background: linear-gradient(135deg, #f97316, #ea580c); width: 72px; height: 72px; border-radius: 0.9rem; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 2rem;">📄</span>
+          </div>
+        </div>
 
-          <p style="font-size: 0.78rem; color: #475569; margin: 0 0 0.2rem;">
-            <strong>Remitente:</strong> {{ radicado.nombreRemitente || '---' }}
-          </p>
-          <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 0.6rem;">{{ fechaActualRadicado }}</p>
+        <!-- Número NOR -->
+        <div class="sticker-numero" style="color: #ea580c;">NOR-2026-{{ nroRadicadoSimulado }}</div>
 
-          <p style="font-size: 0.7rem; font-weight: 800; color: #ea580c; letter-spacing: 1px; margin: 0 0 1rem;">SIN RADICADO</p>
+        <!-- Datos -->
+        <div class="sticker-datos">
+          <div class="sticker-dato-row">
+            <span class="sticker-dato-label">Remitente</span>
+            <span class="sticker-dato-val">{{ radicado.nombreRemitente || '---' }}</span>
+          </div>
+          <div class="sticker-dato-row">
+            <span class="sticker-dato-label">Asunto</span>
+            <span class="sticker-dato-val">{{ radicado.asunto || '---' }}</span>
+          </div>
+          <div class="sticker-dato-row">
+            <span class="sticker-dato-label">Fecha</span>
+            <span class="sticker-dato-val">{{ fechaActualRadicado }}</span>
+          </div>
+        </div>
 
+        <!-- Badge SIN RADICADO -->
+        <div style="padding: 0.4rem 1rem 0.8rem;">
+          <span style="display: inline-block; background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;
+                       font-size: 0.65rem; font-weight: 800; letter-spacing: 1.5px; padding: 0.25rem 0.8rem;
+                       border-radius: 2rem; text-transform: uppercase;">SIN RADICADO</span>
+        </div>
+
+        <!-- Botón Imprimir Registro -->
+        <div style="padding: 0 1rem 1rem;">
           <button (click)="ejecutarRadicacion()"
                   style="width: 100%; padding: 0.7rem; background: linear-gradient(135deg, #f97316, #ea580c);
                          color: white; border: none; border-radius: 0.8rem; font-weight: 700;
@@ -967,6 +991,8 @@
             🖨️ Imprimir Registro
           </button>
         </div>
+
+        <p class="sticker-aviso">Vista previa — se genera al registrar</p>
       </div>
     </aside>
   </div>
