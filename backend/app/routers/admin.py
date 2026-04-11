@@ -211,7 +211,7 @@ async def importar_estructura_excel(request: Request, file: UploadFile = File(..
 async def listar_estructura(admin_info: dict = Depends(obtener_admin_actual)):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT unidad, oficina, depende_de FROM estructura_organica ORDER BY unidad ASC")
+    cur.execute("SELECT cod_unidad, unidad, cod_oficina, oficina, depende_de FROM estructura_organica ORDER BY cod_unidad ASC, cod_oficina ASC")
     res = cur.fetchall()
     cur.close()
     conn.close()
