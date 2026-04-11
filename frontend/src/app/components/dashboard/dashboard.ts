@@ -236,7 +236,8 @@ anexosBinarios: File[] = [];
 
   listaTRD: any[] = [];
   catalogoSeries: any[] = [];
-  catalogoSubseries: any[] = [];
+  catalogoSubseries: any[] = [];       // Para dropdowns de ventanilla (filtrado al seleccionar serie)
+  catalogoSubseriesTRD: any[] = [];    // Para dropdowns del formulario TRD
   
   // --- CONTROL DE INTERFAZ (Modales) ---
   mostrarFormularioCrear: boolean = false; 
@@ -460,11 +461,93 @@ anexosBinarios: File[] = [];
       .subscribe({
         next: (res) => {
           this.unidadesOrganicas = res;
-          this.unidadesDisponibles = [...new Set(res.map(u => u.unidad))];
+          this.unidadesDisponibles = [...new Set(res.map((u: any) => u.unidad))];
           this.cd.detectChanges();
         },
         error: () => console.warn("Modo local: No se pudo cargar la estructura.")
       });
+  }
+
+  // ── Códigos para tabla de estructura orgánica (vienen directo de la BD) ──────
+  getCodUnidad(u: any): string { return u.cod_unidad || '--'; }
+  getCodOficina(u: any): string { return u.cod_oficina || '--'; }
+
+  // ── Auto-fill TRD: Unidad ────────────────────────────────────────────────────
+  getOficinasDeUnidad(): string[] {
+    return this.unidadesOrganicas
+      .filter((u: any) => u.unidad === this.nuevaTRD.unidad)
+      .map((u: any) => u.oficina);
+  }
+
+  onTRDUnidadChange() {
+    const found = this.unidadesOrganicas.find((u: any) => u.unidad === this.nuevaTRD.unidad);
+    this.nuevaTRD.codUnidad = found?.cod_unidad || '';
+    this.nuevaTRD.oficina = '';
+    this.nuevaTRD.codOficina = '';
+  }
+
+  onTRDCodUnidadChange() {
+    const found = this.unidadesOrganicas.find((u: any) => u.cod_unidad === this.nuevaTRD.codUnidad);
+    if (found) {
+      this.nuevaTRD.unidad = found.unidad;
+      this.nuevaTRD.oficina = '';
+      this.nuevaTRD.codOficina = '';
+    }
+  }
+
+  onTRDOficinaChange() {
+    const found = this.unidadesOrganicas.find(
+      (u: any) => u.unidad === this.nuevaTRD.unidad && u.oficina === this.nuevaTRD.oficina
+    );
+    this.nuevaTRD.codOficina = found?.cod_oficina || '';
+  }
+
+  onTRDCodOficinaChange() {
+    const found = this.unidadesOrganicas.find((u: any) => u.cod_oficina === this.nuevaTRD.codOficina);
+    if (found) {
+      this.nuevaTRD.unidad = found.unidad;
+      this.nuevaTRD.codUnidad = found.cod_unidad || '';
+      this.nuevaTRD.oficina = found.oficina;
+    }
+  }
+
+  // ── Auto-fill TRD: Serie ─────────────────────────────────────────────────────
+  onTRDCodSerieChange() {
+    const found = this.catalogoSeries.find(s => s.cod_serie === this.nuevaTRD.codSerie);
+    this.nuevaTRD.nombreSerie = found ? found.nombre_serie : '';
+    this.nuevaTRD.codSubserie = '';
+    this.nuevaTRD.nombreSubserie = '';
+    // Cargar subseries de esta serie
+    if (found) {
+      this.http.get<any[]>(`${this.apiUrl}/admin/catalogo-subseries?cod_serie=${found.cod_serie}`)
+        .subscribe({ next: (res) => { this.catalogoSubseriesTRD = res; this.cd.detectChanges(); } });
+    } else {
+      this.catalogoSubseriesTRD = [];
+    }
+  }
+
+  onTRDNombreSerieChange() {
+    const found = this.catalogoSeries.find(s => s.nombre_serie === this.nuevaTRD.nombreSerie);
+    this.nuevaTRD.codSerie = found ? found.cod_serie : '';
+    this.nuevaTRD.codSubserie = '';
+    this.nuevaTRD.nombreSubserie = '';
+    if (found) {
+      this.http.get<any[]>(`${this.apiUrl}/admin/catalogo-subseries?cod_serie=${found.cod_serie}`)
+        .subscribe({ next: (res) => { this.catalogoSubseriesTRD = res; this.cd.detectChanges(); } });
+    } else {
+      this.catalogoSubseriesTRD = [];
+    }
+  }
+
+  // ── Auto-fill TRD: Subserie ──────────────────────────────────────────────────
+  onTRDCodSubserieChange() {
+    const found = this.catalogoSubseriesTRD.find(s => s.cod_subserie === this.nuevaTRD.codSubserie);
+    this.nuevaTRD.nombreSubserie = found ? found.nombre_subserie : '';
+  }
+
+  onTRDNombreSubserieChange() {
+    const found = this.catalogoSubseriesTRD.find(s => s.nombre_subserie === this.nuevaTRD.nombreSubserie);
+    this.nuevaTRD.codSubserie = found ? found.cod_subserie : '';
   }
 
   agregarDependencia() {
@@ -1718,10 +1801,15 @@ limpiarFormularioRadicacion() {
   }
 
   getSubseriesUnicas() {
-    return this.catalogoSubseries.map(sub => ({
-      nombre: sub.nombre_subserie,
-      etiqueta: `${sub.cod_subserie} - ${sub.nombre_subserie}`
-    }));
+    return this.catalogoSubseries.map(sub => {
+      // Mostrar solo el número propio (ej: "02-01" → "01")
+      const partes = sub.cod_subserie.split('-');
+      const codCorto = partes.length > 1 ? partes.slice(1).join('-') : sub.cod_subserie;
+      return {
+        nombre: sub.nombre_subserie,
+        etiqueta: `${codCorto} - ${sub.nombre_subserie}`
+      };
+    });
   }
 
   getTiposDocumentalesUnicos() {

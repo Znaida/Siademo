@@ -1253,10 +1253,20 @@
 
           <div style="margin-top: 3rem;">
             <table class="siade-table">
-              <thead><tr><th>Unidad Administrativa</th><th>Oficina Productora</th><th style="text-align: center;">Acciones</th></tr></thead>
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Cód. Unidad</th>
+                  <th>Unidad Administrativa</th>
+                  <th style="width: 90px;">Cód. Oficina</th>
+                  <th>Oficina Productora</th>
+                  <th style="text-align: center;">Acciones</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr *ngFor="let u of unidadesOrganicas; let i = index">
+                  <td><span style="font-family: monospace; font-weight: 700; color: #2563eb;">{{ getCodUnidad(u) }}</span></td>
                   <td><strong style="color: #1a2b4b;">{{ u.unidad }}</strong></td>
+                  <td><span style="font-family: monospace; font-weight: 700; color: #7c3aed;">{{ getCodOficina(u) }}</span></td>
                   <td>{{ u.oficina }}</td>
                   <td style="text-align: center;">
                     <span (click)="editarUnidad(i)" style="cursor: pointer; margin-right: 1rem;">📝</span>
@@ -1354,15 +1364,68 @@
           <div class="entity-data-box" style="background: #fff; border: 1px solid #e2e8f0;">
             <h4 class="section-subtitle">Agregar Nueva Serie Documental</h4>
             <div class="trd-form-grid">
-              <div><label class="siade-label">Código Unidad</label><input type="text" [(ngModel)]="nuevaTRD.codUnidad" class="siade-input"></div>
-              <div><label class="siade-label">Unidad Administrativa</label><select [(ngModel)]="nuevaTRD.unidad" class="siade-select"><option *ngFor="let u of unidadesDisponibles" [value]="u">{{u}}</option></select></div>
-              <div><label class="siade-label">Código Oficina</label><input type="text" [(ngModel)]="nuevaTRD.codOficina" class="siade-input"></div>
-              <div><label class="siade-label">Oficina Productora</label><select [(ngModel)]="nuevaTRD.oficina" class="siade-select"><option value="Gerencia">Gerencia</option></select></div>
-              
-              <div><label class="siade-label">Código Serie</label><input type="text" [(ngModel)]="nuevaTRD.codSerie" class="siade-input"></div>
-              <div><label class="siade-label">Nombre Serie</label><input type="text" [(ngModel)]="nuevaTRD.nombreSerie" class="siade-input"></div>
-              <div><label class="siade-label">Código Subserie</label><input type="text" [(ngModel)]="nuevaTRD.codSubserie" class="siade-input"></div>
-              <div><label class="siade-label">Nombre Subserie</label><input type="text" [(ngModel)]="nuevaTRD.nombreSubserie" class="siade-input"></div>
+
+              <!-- Par 1: Unidad -->
+              <div>
+                <label class="siade-label">Código Unidad</label>
+                <input type="text" [(ngModel)]="nuevaTRD.codUnidad" (change)="onTRDCodUnidadChange()"
+                       class="siade-input" placeholder="Ej: 01">
+              </div>
+              <div>
+                <label class="siade-label">Unidad Administrativa</label>
+                <select [(ngModel)]="nuevaTRD.unidad" (change)="onTRDUnidadChange()" class="siade-select">
+                  <option value="">-- Seleccione Unidad --</option>
+                  <option *ngFor="let u of unidadesDisponibles" [value]="u">{{u}}</option>
+                </select>
+              </div>
+
+              <!-- Par 2: Oficina -->
+              <div>
+                <label class="siade-label">Código Oficina</label>
+                <input type="text" [(ngModel)]="nuevaTRD.codOficina" (change)="onTRDCodOficinaChange()"
+                       class="siade-input" placeholder="Ej: 01-02">
+              </div>
+              <div>
+                <label class="siade-label">Oficina Productora</label>
+                <select [(ngModel)]="nuevaTRD.oficina" (change)="onTRDOficinaChange()" class="siade-select">
+                  <option value="">-- Seleccione Oficina --</option>
+                  <option *ngFor="let o of getOficinasDeUnidad()" [value]="o">{{o}}</option>
+                </select>
+              </div>
+
+              <!-- Par 3: Serie -->
+              <div>
+                <label class="siade-label">Código Serie</label>
+                <select [(ngModel)]="nuevaTRD.codSerie" (change)="onTRDCodSerieChange()" class="siade-select">
+                  <option value="">-- Código --</option>
+                  <option *ngFor="let s of catalogoSeries" [value]="s.cod_serie">{{s.cod_serie}}</option>
+                </select>
+              </div>
+              <div>
+                <label class="siade-label">Nombre Serie</label>
+                <select [(ngModel)]="nuevaTRD.nombreSerie" (change)="onTRDNombreSerieChange()" class="siade-select">
+                  <option value="">-- Seleccione Serie --</option>
+                  <option *ngFor="let s of catalogoSeries" [value]="s.nombre_serie">{{s.nombre_serie}}</option>
+                </select>
+              </div>
+
+              <!-- Par 4: Subserie -->
+              <div>
+                <label class="siade-label">Código Subserie</label>
+                <select [(ngModel)]="nuevaTRD.codSubserie" (change)="onTRDCodSubserieChange()" class="siade-select"
+                        [disabled]="!nuevaTRD.codSerie">
+                  <option value="">-- Código --</option>
+                  <option *ngFor="let sub of catalogoSubseriesTRD" [value]="sub.cod_subserie">{{sub.cod_subserie}}</option>
+                </select>
+              </div>
+              <div>
+                <label class="siade-label">Nombre Subserie</label>
+                <select [(ngModel)]="nuevaTRD.nombreSubserie" (change)="onTRDNombreSubserieChange()" class="siade-select"
+                        [disabled]="!nuevaTRD.codSerie">
+                  <option value="">-- Seleccione Subserie --</option>
+                  <option *ngFor="let sub of catalogoSubseriesTRD" [value]="sub.nombre_subserie">{{sub.nombre_subserie}}</option>
+                </select>
+              </div>
               
               <div><label class="siade-label">Tipo Documental</label><input type="text" [(ngModel)]="nuevaTRD.tipoDocumental" class="siade-input"></div>
               <div><label class="siade-label">Soporte</label><select [(ngModel)]="nuevaTRD.soporte" class="siade-select"><option value="Digital">Digital</option><option value="Papel">Papel</option></select></div>

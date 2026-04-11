@@ -238,7 +238,9 @@ def inicializar_db():
             entidad TEXT,
             unidad TEXT,
             oficina TEXT,
-            depende_de TEXT
+            depende_de TEXT,
+            cod_unidad TEXT,
+            cod_oficina TEXT
         )""",
         f"""CREATE TABLE IF NOT EXISTS trd (
             id {pk},
@@ -401,6 +403,13 @@ def _migrar_columnas_sqlite(conn, cur):
     for col, tipo in [("debe_cambiar_password", "INTEGER DEFAULT 0"), ("correo", "TEXT")]:
         try:
             cur.execute(f"ALTER TABLE usuarios ADD COLUMN {col} {tipo}")
+            conn.commit()
+        except Exception:
+            pass
+
+    for col, tipo in [("cod_unidad", "TEXT"), ("cod_oficina", "TEXT")]:
+        try:
+            cur.execute(f"ALTER TABLE estructura_organica ADD COLUMN {col} {tipo}")
             conn.commit()
         except Exception:
             pass
