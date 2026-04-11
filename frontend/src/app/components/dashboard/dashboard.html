@@ -1415,7 +1415,7 @@
                 <select [(ngModel)]="nuevaTRD.codSubserie" (change)="onTRDCodSubserieChange()" class="siade-select"
                         [disabled]="!nuevaTRD.codSerie">
                   <option value="">-- Código --</option>
-                  <option *ngFor="let sub of catalogoSubseriesTRD" [value]="sub.cod_subserie">{{sub.cod_subserie}}</option>
+                  <option *ngFor="let sub of catalogoSubseriesTRD" [value]="sub.cod_subserie">{{ sub.cod_subserie.split('-').slice(1).join('-') }}</option>
                 </select>
               </div>
               <div>
