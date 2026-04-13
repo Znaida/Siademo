@@ -39,7 +39,7 @@ async def listar_usuarios_activos(user_info: dict = Depends(obtener_usuario_actu
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT id, nombre_completo, usuario FROM usuarios WHERE activo = 1 ORDER BY nombre_completo")
+        cur.execute("SELECT id, nombre_completo, usuario, correo FROM usuarios WHERE activo = 1 ORDER BY nombre_completo")
         return [dict(u) for u in cur.fetchall()]
     finally:
         cur.close()

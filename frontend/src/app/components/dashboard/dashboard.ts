@@ -673,7 +673,9 @@ anexosBinarios: File[] = [];
         next: (res) => {
           const nroGenerado = res.nro_radicado || res.numero || '—';
           const esNOR = this.tabActivaVentanilla === 'no-radicables';
-          this.nroRadicadoSimulado = nroGenerado;
+          // Guardar datos del remitente ANTES de limpiar el formulario
+          const nombreRemitente = this.radicado.nombreRemitente || this.radicado.primerApellido || '---';
+          const tabActual = this.tabActivaVentanilla;
           this.limpiarFormularioRadicacion();
           this.obtenerEventos();
           this.cargarRadicados();
@@ -698,7 +700,7 @@ anexosBinarios: File[] = [];
               allowOutsideClick: false,
             }).then((result) => {
               if (result.isConfirmed) {
-                this.imprimirRegistroNOR(nroGenerado);
+                this.imprimirRegistroNOR(nroGenerado, nombreRemitente);
               }
             });
           } else {
@@ -719,7 +721,7 @@ anexosBinarios: File[] = [];
               allowOutsideClick: false,
             }).then((result) => {
               if (result.isConfirmed) {
-                this.imprimirStickerPDF(nroGenerado, res.vencimiento);
+                this.imprimirStickerPDF(nroGenerado, res.vencimiento, nombreRemitente, tabActual);
               }
             });
           }
@@ -737,14 +739,15 @@ anexosBinarios: File[] = [];
       });
   }
 
-async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
+async imprimirStickerPDF(nroRadicado: string, vencimiento: string, nombreRemitente?: string, tab?: string) {
+    const tabUsada = tab ?? this.tabActivaVentanilla;
     const labelMap: Record<string, string> = {
       'recibidas':    'ALCALDÍA DE MANIZALES (ENTRADA)',
       'enviadas':     'ALCALDÍA DE MANIZALES (SALIDA)',
       'internas':     'ALCALDÍA DE MANIZALES (INTERNA)',
       'no-radicables':'ALCALDÍA DE MANIZALES (NO RADICABLE)'
     };
-    const label = labelMap[this.tabActivaVentanilla] ?? 'ALCALDÍA DE MANIZALES';
+    const label = labelMap[tabUsada] ?? 'ALCALDÍA DE MANIZALES';
 
     const qrData = `SIADE|${nroRadicado}|${new Date().toISOString()}`;
     const qrDataUrl: string = await QRCode.toDataURL(qrData, { width: 200, margin: 1 });
@@ -785,7 +788,7 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
 
-    const isInterna = this.tabActivaVentanilla === 'internas';
+    const isInterna = tabUsada === 'internas';
     if (isInterna) {
       doc.text('Remite:', 5, 89);
       doc.setFont('helvetica', 'normal');
@@ -795,10 +798,10 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
       doc.setFont('helvetica', 'normal');
       doc.text(this.radicado.funcionarioResponsable || '---', 25, 95);
     } else {
-      const personLabel = this.tabActivaVentanilla === 'enviadas' ? 'Destinatario:' : 'Remitente:';
+      const personLabel = tabUsada === 'enviadas' ? 'Destinatario:' : 'Remitente:';
       doc.text(personLabel, 5, 89);
       doc.setFont('helvetica', 'normal');
-      doc.text(this.radicado.nombreRemitente || '---', 30, 89);
+      doc.text(nombreRemitente || this.radicado.nombreRemitente || '---', 30, 89);
       doc.setFont('helvetica', 'bold');
       doc.text('Vencimiento:', 5, 95);
       doc.setFont('helvetica', 'normal');
@@ -828,7 +831,7 @@ async imprimirStickerPDF(nroRadicado: string, vencimiento: string) {
   }
 
 // ── Registro NOR (sin QR, sin sticker) ──────────────────────────────────────
-imprimirRegistroNOR(nroRegistro: string) {
+imprimirRegistroNOR(nroRegistro: string, nombreRemitente?: string) {
   const doc = new jsPDF({ unit: 'mm', format: [80, 100] });
 
   // Fondo naranja header
@@ -863,7 +866,7 @@ imprimirRegistroNOR(nroRegistro: string) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text(`Remitente: ${this.radicado.nombreRemitente || '---'}`, 40, 62, { align: 'center' });
+  doc.text(`Remitente: ${nombreRemitente || this.radicado.nombreRemitente || '---'}`, 40, 62, { align: 'center' });
   doc.text(this.fechaActualRadicado, 40, 68, { align: 'center' });
 
   // Etiqueta SIN RADICADO
@@ -1258,7 +1261,12 @@ limpiarFormularioRadicacion() {
 
   cargarUsuariosActivos() {
     this.http.get<any[]>(`${this.apiUrl}/usuarios-activos`)
-      .subscribe({ next: (res) => { this.usuariosActivos = res; } });
+      .subscribe({ next: (res) => { this.usuariosActivos = res; this.cd.detectChanges(); } });
+  }
+
+  getCorreoFuncionario(nombreCompleto: string): string {
+    const u = this.usuariosActivos.find(u => u.nombre_completo === nombreCompleto);
+    return u?.correo || '';
   }
 
   cargarNotificaciones() {

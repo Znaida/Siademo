@@ -458,8 +458,19 @@
       <div class="form-section-card">
         <h4 class="section-subtitle-blue">👥 Destinatario Interno</h4>
         <div class="siade-row-2">
-          <div><label class="siade-label">Sección responsable</label><select [(ngModel)]="radicado.seccionResponsable" class="siade-select"><option value="Secretaría General">Secretaría General</option></select></div>
-          <div><label class="siade-label">Nombre del Funcionario</label><select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select"><option value="Juan Pérez">Juan Pérez</option></select></div>
+          <div><label class="siade-label">Sección responsable</label>
+            <select [(ngModel)]="radicado.seccionResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let s of unidadesDisponibles" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+          <div><label class="siade-label">Nombre del Funcionario</label>
+            <select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let u of usuariosActivos" [value]="u.nombre_completo">{{ u.nombre_completo }}</option>
+            </select>
+            <small *ngIf="getCorreoFuncionario(radicado.funcionarioResponsable)" style="color:#94a3b8; font-size:0.72rem; margin-top:3px; display:block;">✉ {{ getCorreoFuncionario(radicado.funcionarioResponsable) }}</small>
+          </div>
         </div>
         <div class="siade-row-1">
           <label class="siade-label">Con copia a</label>
@@ -545,8 +556,19 @@
       <div class="form-section-card">
         <h4 class="section-subtitle-blue">👥 Funcionario que envía / firma</h4>
         <div class="siade-row-2">
-          <div><label class="siade-label">Sección responsable</label><select [(ngModel)]="radicado.seccionResponsable" class="siade-select"><option value="Secretaría General">Secretaría General</option></select></div>
-          <div><label class="siade-label">Nombre del Funcionario</label><select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select"><option value="Juan Pérez">Juan Pérez</option></select></div>
+          <div><label class="siade-label">Sección responsable</label>
+            <select [(ngModel)]="radicado.seccionResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let s of unidadesDisponibles" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+          <div><label class="siade-label">Nombre del Funcionario</label>
+            <select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let u of usuariosActivos" [value]="u.nombre_completo">{{ u.nombre_completo }}</option>
+            </select>
+            <small *ngIf="getCorreoFuncionario(radicado.funcionarioResponsable)" style="color:#94a3b8; font-size:0.72rem; margin-top:3px; display:block;">✉ {{ getCorreoFuncionario(radicado.funcionarioResponsable) }}</small>
+          </div>
         </div>
       </div>
 
@@ -729,22 +751,36 @@
         <div class="siade-row-2">
           <div>
             <label class="siade-label">Dependencia que envía (Origen)</label>
-            <select [(ngModel)]="radicado.seccionOrigen" class="siade-select"><option value="Gerencia">Gerencia</option></select>
+            <select [(ngModel)]="radicado.seccionOrigen" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let s of unidadesDisponibles" [value]="s">{{ s }}</option>
+            </select>
           </div>
           <div>
             <label class="siade-label">Funcionario que envía / firma</label>
-            <select [(ngModel)]="radicado.funcionarioOrigen" class="siade-select"><option value="AdminSIADE">AdminSIADE</option></select>
+            <select [(ngModel)]="radicado.funcionarioOrigen" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let u of usuariosActivos" [value]="u.nombre_completo">{{ u.nombre_completo }}</option>
+            </select>
+            <small *ngIf="getCorreoFuncionario(radicado.funcionarioOrigen)" style="color:#94a3b8; font-size:0.72rem; margin-top:3px; display:block;">✉ {{ getCorreoFuncionario(radicado.funcionarioOrigen) }}</small>
           </div>
         </div>
 
         <div class="siade-row-2">
           <div>
             <label class="siade-label">Dependencia que recibe (Destino)</label>
-            <select [(ngModel)]="radicado.seccionResponsable" class="siade-select"><option value="Secretaría">Secretaría</option></select>
+            <select [(ngModel)]="radicado.seccionResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let s of unidadesDisponibles" [value]="s">{{ s }}</option>
+            </select>
           </div>
           <div>
             <label class="siade-label">Funcionario que recibe</label>
-            <select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select"><option value="Juan Pérez">Juan Pérez</option></select>
+            <select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let u of usuariosActivos" [value]="u.nombre_completo">{{ u.nombre_completo }}</option>
+            </select>
+            <small *ngIf="getCorreoFuncionario(radicado.funcionarioResponsable)" style="color:#94a3b8; font-size:0.72rem; margin-top:3px; display:block;">✉ {{ getCorreoFuncionario(radicado.funcionarioResponsable) }}</small>
           </div>
         </div>
       </div>
@@ -904,8 +940,19 @@
       <div class="form-section-card">
         <h4 class="section-subtitle-blue">👥 Responsable de Gestión</h4>
         <div class="siade-row-2">
-          <div><label class="siade-label">Sección responsable</label><select [(ngModel)]="radicado.seccionResponsable" class="siade-select"><option value="Secretaría">Secretaría</option></select></div>
-          <div><label class="siade-label">Funcionario responsable</label><select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select"><option value="Admin">Admin</option></select></div>
+          <div><label class="siade-label">Sección responsable</label>
+            <select [(ngModel)]="radicado.seccionResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let s of unidadesDisponibles" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+          <div><label class="siade-label">Funcionario responsable</label>
+            <select [(ngModel)]="radicado.funcionarioResponsable" class="siade-select">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let u of usuariosActivos" [value]="u.nombre_completo">{{ u.nombre_completo }}</option>
+            </select>
+            <small *ngIf="getCorreoFuncionario(radicado.funcionarioResponsable)" style="color:#94a3b8; font-size:0.72rem; margin-top:3px; display:block;">✉ {{ getCorreoFuncionario(radicado.funcionarioResponsable) }}</small>
+          </div>
         </div>
         <div class="siade-row-1">
           <label class="siade-label">Con copia a (Funcionarios adicionales)</label>
