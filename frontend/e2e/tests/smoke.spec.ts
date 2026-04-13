@@ -26,10 +26,12 @@ test.describe('Smoke Tests — Azure Deploy', () => {
 
   test('la app no muestra errores críticos de consola', async ({ page }) => {
     const erroresCriticos: string[] = [];
+    const todosLosErrores: string[] = [];
 
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
         const text = msg.text();
+        todosLosErrores.push(text);
         // Ignorar errores de red conocidos que no son bloqueantes
         if (
           !text.includes('favicon') &&
@@ -46,10 +48,17 @@ test.describe('Smoke Tests — Azure Deploy', () => {
     });
 
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
+
+    if (erroresCriticos.length > 0) {
+      console.log('=== TODOS LOS ERRORES DE CONSOLA ===');
+      todosLosErrores.forEach((e, i) => console.log(`[${i+1}] ${e}`));
+      console.log('=== ERRORES CRÍTICOS (no filtrados) ===');
+      erroresCriticos.forEach((e, i) => console.log(`[${i+1}] ${e}`));
+    }
 
     // No debe haber errores críticos de JavaScript
-    expect(erroresCriticos.length).toBe(0);
+    expect(erroresCriticos, `Errores críticos encontrados:\n${erroresCriticos.join('\n')}`).toHaveLength(0);
   });
 
   test('la página es responsiva en mobile', async ({ page }) => {

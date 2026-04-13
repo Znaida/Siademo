@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes, PreloadAllModules } from '@angular/router';
+import { RouterModule, Routes, NoPreloading } from '@angular/router';
 import { autoLoginGuard } from './guards/auto-login.guard';
 
 const routes: Routes = [
@@ -28,7 +28,7 @@ const routes: Routes = [
 @NgModule({
   imports: [
     RouterModule.forRoot(routes, {
-      preloadingStrategy: PreloadAllModules
+      preloadingStrategy: NoPreloading
     })
   ],
   exports: [RouterModule]
