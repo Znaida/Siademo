@@ -440,7 +440,7 @@
         <div class="siade-row-3">
           <div><label class="siade-label">Días para dar respuesta</label><input type="number" [(ngModel)]="radicado.diasRespuesta" (input)="onDiasRespuestaChange()" class="siade-input" min="1"></div>
           <div><label class="siade-label">Fecha de Vencimiento</label><input type="text" [value]="radicado.fechaVencimiento" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
         </div>
       </div>
 
@@ -639,7 +639,7 @@
         <div class="siade-row-3">
           <div><label class="siade-label">Método de Envío</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Físico">Físico</option><option value="Correo Electrónico">Correo Electrónico</option><option value="Correo Certificado">Correo Certificado</option><option value="Portal Web">Portal Web</option></select></div>
           <div><label class="siade-label">No. de Guía</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
         </div>
       </div>
 
@@ -788,7 +788,7 @@
         </div>
 
         <div class="siade-row-3">
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
           <div><label class="siade-label">Anexo</label><input type="text" class="siade-input"></div>
           <div><label class="siade-label">Descripción del Anexo</label><input type="text" class="siade-input"></div>
         </div>
@@ -892,7 +892,7 @@
               <option value="Portal Web">Portal Web</option>
             </select>
           </div>
-          <div><label class="siade-label">No. de Folios</label><input type="number" [(ngModel)]="radicado.folios" class="siade-input" min="0" max="15"></div>
+          <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
           <div><label class="siade-label">No. Guía (Si aplica)</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
         </div>
         <div class="siade-row-2">

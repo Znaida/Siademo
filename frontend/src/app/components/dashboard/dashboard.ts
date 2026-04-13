@@ -1968,20 +1968,59 @@ limpiarFormularioRadicacion() {
   }
 
     // Función para manejar la selección de archivos
+  private contarPaginasPDF(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      if (!file.name.toLowerCase().endsWith('.pdf')) { resolve(1); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buf = e.target?.result as ArrayBuffer;
+          const text = new TextDecoder('latin1').decode(buf);
+          // Buscar /Count N en el diccionario de páginas del PDF
+          const matches = [...text.matchAll(/\/Count\s+(\d+)/g)];
+          if (matches.length > 0) {
+            // El mayor valor de /Count es el total de páginas
+            const max = Math.max(...matches.map(m => parseInt(m[1], 10)));
+            resolve(max);
+          } else {
+            // Fallback: contar ocurrencias de /Type /Page (sin 's')
+            const pages = (text.match(/\/Type\s*\/Page[^s]/g) || []).length;
+            resolve(pages || 1);
+          }
+        } catch { resolve(1); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   onFileSelected(event: any, tipo: string) {
-    const archivo = event.target.files[0];
-    if (archivo) {
-      if (tipo === 'principal') {
-        this.nombreArchivoPrincipal = archivo.name;
-        this.archivoBinarioPrincipal = archivo;
-        console.log("Documento principal cargado:", archivo.name);
-      } else {
-        this.nombreArchivoAnexo = `${event.target.files.length} archivo(s) seleccionado(s)`;
-        this.anexosBinarios = Array.from(event.target.files);
-        console.log("Anexos cargados:", event.target.files.length);
-      }
-      this.cd.detectChanges();
+    const files: File[] = Array.from(event.target.files);
+    if (!files.length) return;
+
+    if (tipo === 'principal') {
+      this.nombreArchivoPrincipal = files[0].name;
+      this.archivoBinarioPrincipal = files[0];
+      // Contar páginas del principal y sumar con los anexos actuales
+      this.contarPaginasPDF(files[0]).then(paginas => {
+        (this as any)._paginasPrincipal = paginas;
+        const paginasAnexos = (this as any)._paginasAnexos || 0;
+        this.radicado.folios = Math.min(paginas + paginasAnexos, 15);
+        this.cd.detectChanges();
+      });
+    } else {
+      this.nombreArchivoAnexo = `${files.length} archivo(s) seleccionado(s)`;
+      this.anexosBinarios = files;
+      // Contar páginas de todos los anexos en paralelo
+      Promise.all(files.map(f => this.contarPaginasPDF(f))).then(conteos => {
+        const totalAnexos = conteos.reduce((a, b) => a + b, 0);
+        (this as any)._paginasAnexos = totalAnexos;
+        const paginasPrincipal = this.archivoBinarioPrincipal
+          ? (this as any)._paginasPrincipal || 0 : 0;
+        this.radicado.folios = Math.min(totalAnexos + paginasPrincipal, 15);
+        this.cd.detectChanges();
+      });
     }
+    this.cd.detectChanges();
   }
 
   getRoleName(rolId: number): string {
