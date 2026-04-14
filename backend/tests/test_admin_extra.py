@@ -132,9 +132,10 @@ def test_registrar_dependencia(admin_override):
     """Registrar una dependencia nueva devuelve success."""
     res = admin_override.post("/admin/registrar-dependencia", json={
         "entidad": "Municipio Test",
+        "cod_unidad": "100",
         "unidad_administrativa": "Secretaría Test",
-        "oficina_productora": "Oficina de Pruebas",
-        "relacion_jerarquica": "Nivel Raíz"
+        "cod_oficina": "101",
+        "oficina_productora": "Oficina de Pruebas"
     })
     assert res.status_code == 200
     assert res.json()["status"] == "success"

@@ -1282,10 +1282,8 @@
               <div *ngIf="mostrarDropdownSedes"
                    style="position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1.5px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 8px 24px rgba(0,0,0,0.10); z-index:999; padding:0.5rem 0;">
                 <label *ngFor="let sede of sedesDisponibles"
-                       style="display:flex; align-items:center; gap:0.6rem; padding:0.45rem 1rem; cursor:pointer; transition:background 0.15s;"
-                       [style.background]="isSedeSeleccionada(sede) ? '#f0f7ff' : 'transparent'"
-                       (mouseenter)="$event.currentTarget.style.background = isSedeSeleccionada(sede) ? '#e0f0ff' : '#f8fafc'"
-                       (mouseleave)="$event.currentTarget.style.background = isSedeSeleccionada(sede) ? '#f0f7ff' : 'transparent'">
+                       style="display:flex; align-items:center; gap:0.6rem; padding:0.45rem 1rem; cursor:pointer; transition:background 0.15s; border-radius:0.4rem;"
+                       [style.background]="isSedeSeleccionada(sede) ? '#f0f7ff' : 'transparent'">
                   <input type="checkbox" [checked]="isSedeSeleccionada(sede)" (change)="toggleSede(sede)" style="accent-color:#2563eb; width:15px; height:15px;">
                   <span style="font-size:0.9rem; color:#1e293b;">{{ sede }}</span>
                 </label>
