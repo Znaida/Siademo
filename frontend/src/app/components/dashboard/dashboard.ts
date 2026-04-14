@@ -209,11 +209,11 @@ anexosBinarios: File[] = [];
     nombre: 'Alcaldía de Manizales',
     fondoSeleccionado: 'Gestión Administrativa',
     fondosDisponibles: ['Gestión Administrativa', 'Archivo Central', 'Académico'],
-    sedes: 'Manizales, Chinchiná, Pereira'
+    sedes: ''
   };
 
-  sedesDisponibles: string[] = ['Manizales', 'Chinchiná', 'Pereira', 'Villamaría', 'Palestina', 'Neira'];
-  sedesSeleccionadas: string[] = ['Manizales', 'Chinchiná', 'Pereira'];
+  sedesDisponibles: string[] = ['SEDE 1', 'SEDE 2', 'SEDE 3', 'SEDE 4', 'SEDE 5'];
+  sedesSeleccionadas: string[] = [];
   mostrarDropdownSedes: boolean = false;
 
   toggleSede(sede: string) {
