@@ -356,7 +356,7 @@
         </div>
 
         <div class="siade-row-2">
-          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="Pasaporte">Pasaporte</option></select></div>
+          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="NIT">NIT</option><option value="Pasaporte">Pasaporte</option></select></div>
           <div><label class="siade-label">No. de Documento</label><input type="text" [(ngModel)]="radicado.nroDocRemitente" class="siade-input"></div>
         </div>
 
@@ -435,7 +435,7 @@
         </div>
         <div class="siade-row-2">
           <div><label class="siade-label">Método Recepción</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Físico">Físico</option><option value="Correo Electrónico">Correo Electrónico</option><option value="Portal Web">Portal Web</option></select></div>
-          <div><label class="siade-label">No. de Guía</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
+          <div><label class="siade-label">{{ (radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'Enlace' : 'No. de Guía' }}</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input" [placeholder]="(radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'https://...' : 'Ej: 123456789'"></div>
         </div>
         <div class="siade-row-3">
           <div><label class="siade-label">Días para dar respuesta</label><input type="number" [(ngModel)]="radicado.diasRespuesta" (input)="onDiasRespuestaChange()" class="siade-input" min="1"></div>
@@ -591,7 +591,7 @@
         </div>
 
         <div class="siade-row-2">
-          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="Pasaporte">Pasaporte</option></select></div>
+          <div><label class="siade-label">Tipo de Documento</label><select [(ngModel)]="radicado.tipoDocRemitente" class="siade-select"><option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option><option value="Cédula de Extranjería">Cédula de Extranjería</option><option value="NIT">NIT</option><option value="Pasaporte">Pasaporte</option></select></div>
           <div><label class="siade-label">No. de Documento</label><input type="text" [(ngModel)]="radicado.nroDocRemitente" class="siade-input"></div>
         </div>
 
@@ -660,7 +660,7 @@
         </div>
         <div class="siade-row-3">
           <div><label class="siade-label">Método de Envío</label><select [(ngModel)]="radicado.metodoRecepcion" class="siade-select"><option value="Físico">Físico</option><option value="Correo Electrónico">Correo Electrónico</option><option value="Correo Certificado">Correo Certificado</option><option value="Portal Web">Portal Web</option></select></div>
-          <div><label class="siade-label">No. de Guía</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
+          <div><label class="siade-label">{{ (radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'Enlace' : 'No. de Guía' }}</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input" [placeholder]="(radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'https://...' : 'Ej: 123456789'"></div>
           <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
         </div>
       </div>
@@ -929,7 +929,7 @@
             </select>
           </div>
           <div><label class="siade-label">No. de Folios</label><input type="number" [value]="radicado.folios" class="siade-input readonly" readonly style="background:#f1f5f9; cursor:not-allowed;"></div>
-          <div><label class="siade-label">No. Guía (Si aplica)</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input"></div>
+          <div><label class="siade-label">{{ (radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'Enlace' : 'No. de Guía' }}</label><input type="text" [(ngModel)]="radicado.nroGuia" class="siade-input" [placeholder]="(radicado.metodoRecepcion === 'Correo Electrónico' || radicado.metodoRecepcion === 'Portal Web') ? 'https://...' : 'Ej: 123456789'"></div>
         </div>
         <div class="siade-row-2">
           <div><label class="siade-label">Anexo</label><input type="text" [(ngModel)]="radicado.anexoNombre" class="siade-input" placeholder="Ej: Folleto Turístico"></div>
@@ -1267,35 +1267,83 @@
               </div>
               <div>
                 <label class="siade-label">Fondo Documental</label>
-                <select [(ngModel)]="entidadInfo.fondoSeleccionado" class="siade-select">
-                  <option *ngFor="let fondo of entidadInfo.fondosDisponibles" [value]="fondo">{{ fondo }}</option>
-                </select>
+                <input type="text" [(ngModel)]="entidadInfo.fondoSeleccionado" class="siade-input" placeholder="Ej: Fondo Documental Contraloría Municipal">
               </div>
             </div>
             <label class="siade-label" style="margin-top: 1rem;">Sedes</label>
-            <input type="text" [(ngModel)]="entidadInfo.sedes" class="siade-input" placeholder="Sedes separadas por comas">
-          </div>
-
-          <div class="entity-data-box" style="background: #f1f5f9; border-radius: 1.5rem;">
-            <h4 class="section-subtitle">2. Nivel de Dependencias</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; align-items: flex-end;">
-              <div>
-                <label class="siade-label">Unidad Administrativa</label>
-                <input type="text" [(ngModel)]="nuevaDependencia.unidadNombre" class="siade-input">
+            <div style="position: relative;">
+              <div (click)="mostrarDropdownSedes = !mostrarDropdownSedes"
+                   style="background:#fff; border:1.5px solid #e2e8f0; border-radius:0.75rem; padding:0.55rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; min-height:42px; user-select:none;">
+                <span style="color:#1e293b; font-size:0.92rem;">
+                  {{ entidadInfo.sedes || 'Seleccione sedes...' }}
+                </span>
+                <span style="color:#94a3b8; font-size:0.8rem;">{{ mostrarDropdownSedes ? '▲' : '▼' }}</span>
               </div>
-              <div>
-                <label class="siade-label">Oficina Productora</label>
-                <input type="text" [(ngModel)]="nuevaDependencia.oficinaNombre" class="siade-input">
-              </div>
-              <div>
-                <label class="siade-label">Relación Jerárquica</label>
-                <select [(ngModel)]="nuevaDependencia.unidadRelacionada" class="siade-select">
-                  <option value="">-- Seleccionar Unidad --</option>
-                  <option *ngFor="let unidad of unidadesDisponibles" [value]="unidad">{{ unidad }}</option>
-                </select>
+              <div *ngIf="mostrarDropdownSedes"
+                   style="position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1.5px solid #e2e8f0; border-radius:0.75rem; box-shadow:0 8px 24px rgba(0,0,0,0.10); z-index:999; padding:0.5rem 0;">
+                <label *ngFor="let sede of sedesDisponibles"
+                       style="display:flex; align-items:center; gap:0.6rem; padding:0.45rem 1rem; cursor:pointer; transition:background 0.15s;"
+                       [style.background]="isSedeSeleccionada(sede) ? '#f0f7ff' : 'transparent'"
+                       (mouseenter)="$event.currentTarget.style.background = isSedeSeleccionada(sede) ? '#e0f0ff' : '#f8fafc'"
+                       (mouseleave)="$event.currentTarget.style.background = isSedeSeleccionada(sede) ? '#f0f7ff' : 'transparent'">
+                  <input type="checkbox" [checked]="isSedeSeleccionada(sede)" (change)="toggleSede(sede)" style="accent-color:#2563eb; width:15px; height:15px;">
+                  <span style="font-size:0.9rem; color:#1e293b;">{{ sede }}</span>
+                </label>
               </div>
             </div>
-            <button (click)="agregarDependencia()" class="btn-siade primary" style="margin-top: 1.5rem; width: 100%;">REGISTRAR Y VINCULAR</button>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <button (click)="mostrarModalDependencia = true" class="btn-siade primary" style="display:flex; align-items:center; gap:0.5rem;">
+              ＋ Agregar Dependencia
+            </button>
+          </div>
+
+          <!-- Modal Agregar Dependencia -->
+          <div *ngIf="mostrarModalDependencia"
+               style="position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:2000; display:flex; align-items:center; justify-content:center;"
+               (click)="mostrarModalDependencia = false">
+            <div style="background:#fff; border-radius:1.25rem; padding:2rem 2.25rem; width:100%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,0.18);"
+                 (click)="$event.stopPropagation()">
+
+              <!-- Encabezado -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <div>
+                  <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#1e293b;">Nueva Dependencia</h3>
+                  <p style="margin:0.2rem 0 0; font-size:0.8rem; color:#94a3b8;">Registrar unidad y oficina productora</p>
+                </div>
+                <button (click)="mostrarModalDependencia = false"
+                        style="background:none; border:none; font-size:1.4rem; color:#94a3b8; cursor:pointer; line-height:1;">✕</button>
+              </div>
+
+              <!-- Campos -->
+              <div style="display:grid; grid-template-columns:1fr 2fr; gap:1rem; margin-bottom:1rem;">
+                <div>
+                  <label class="siade-label">Cód. Unidad</label>
+                  <input type="text" [(ngModel)]="nuevaDependencia.codUnidad" class="siade-input" placeholder="Ej: 100" style="text-align:center; font-family:monospace; font-weight:700;">
+                </div>
+                <div>
+                  <label class="siade-label">Unidad Administrativa</label>
+                  <input type="text" [(ngModel)]="nuevaDependencia.unidadNombre" class="siade-input" placeholder="Ej: Despacho del Contralor">
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 2fr; gap:1rem; margin-bottom:1.75rem;">
+                <div>
+                  <label class="siade-label">Cód. Oficina</label>
+                  <input type="text" [(ngModel)]="nuevaDependencia.codOficina" class="siade-input" placeholder="Ej: 101" style="text-align:center; font-family:monospace; font-weight:700;">
+                </div>
+                <div>
+                  <label class="siade-label">Oficina Productora</label>
+                  <input type="text" [(ngModel)]="nuevaDependencia.oficinaNombre" class="siade-input" placeholder="Ej: Oficina Asesora Jurídica">
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button (click)="mostrarModalDependencia = false" class="btn-siade" style="background:#f1f5f9; color:#64748b;">Cancelar</button>
+                <button (click)="agregarDependencia()" class="btn-siade primary">Registrar</button>
+              </div>
+            </div>
           </div>
 
           <div style="margin-top: 3rem;">
@@ -1476,7 +1524,44 @@
               
               <div><label class="siade-label">Tipo Documental</label><input type="text" [(ngModel)]="nuevaTRD.tipoDocumental" class="siade-input"></div>
               <div><label class="siade-label">Soporte</label><select [(ngModel)]="nuevaTRD.soporte" class="siade-select"><option value="Digital">Digital</option><option value="Papel">Papel</option></select></div>
-              <div><label class="siade-label">Extensión</label><select [(ngModel)]="nuevaTRD.extension" class="siade-select"><option value="PDF">PDF</option><option value="DOCX">DOCX</option></select></div>
+              <div><label class="siade-label">Formato</label>
+                <select [(ngModel)]="nuevaTRD.extension" class="siade-select">
+                  <optgroup label="Documentos">
+                    <option value="PDF">PDF</option>
+                    <option value="DOCX">DOCX</option>
+                    <option value="DOC">DOC</option>
+                    <option value="XLSX">XLSX</option>
+                    <option value="XLS">XLS</option>
+                    <option value="PPTX">PPTX</option>
+                    <option value="TXT">TXT</option>
+                    <option value="CSV">CSV</option>
+                    <option value="ODT">ODT</option>
+                  </optgroup>
+                  <optgroup label="Imágenes">
+                    <option value="PNG">PNG</option>
+                    <option value="JPG">JPG</option>
+                    <option value="JPEG">JPEG</option>
+                    <option value="TIFF">TIFF</option>
+                    <option value="BMP">BMP</option>
+                    <option value="SVG">SVG</option>
+                  </optgroup>
+                  <optgroup label="Comprimidos">
+                    <option value="ZIP">ZIP</option>
+                    <option value="RAR">RAR</option>
+                    <option value="7Z">7Z</option>
+                  </optgroup>
+                  <optgroup label="Multimedia">
+                    <option value="MP4">MP4</option>
+                    <option value="MP3">MP3</option>
+                    <option value="AVI">AVI</option>
+                  </optgroup>
+                  <optgroup label="Datos / Técnicos">
+                    <option value="XML">XML</option>
+                    <option value="JSON">JSON</option>
+                    <option value="MSG">MSG (Correo)</option>
+                  </optgroup>
+                </select>
+              </div>
               <div><label class="siade-label">Gestión (años)</label><input type="number" [(ngModel)]="nuevaTRD.gestion" class="siade-input"></div>
 
               <div><label class="siade-label">Central (años)</label><input type="number" [(ngModel)]="nuevaTRD.central" class="siade-input"></div>

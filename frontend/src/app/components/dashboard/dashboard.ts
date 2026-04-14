@@ -212,11 +212,31 @@ anexosBinarios: File[] = [];
     sedes: 'Manizales, Chinchiná, Pereira'
   };
 
+  sedesDisponibles: string[] = ['Manizales', 'Chinchiná', 'Pereira', 'Villamaría', 'Palestina', 'Neira'];
+  sedesSeleccionadas: string[] = ['Manizales', 'Chinchiná', 'Pereira'];
+  mostrarDropdownSedes: boolean = false;
+
+  toggleSede(sede: string) {
+    const idx = this.sedesSeleccionadas.indexOf(sede);
+    if (idx >= 0) {
+      this.sedesSeleccionadas.splice(idx, 1);
+    } else {
+      this.sedesSeleccionadas.push(sede);
+    }
+    this.entidadInfo.sedes = this.sedesSeleccionadas.join(', ');
+  }
+
+  isSedeSeleccionada(sede: string): boolean {
+    return this.sedesSeleccionadas.includes(sede);
+  }
+
   nuevaDependencia = {
+    codUnidad: '',
     unidadNombre: '',
-    oficinaNombre: '',
-    unidadRelacionada: ''
+    codOficina: '',
+    oficinaNombre: ''
   };
+  mostrarModalDependencia: boolean = false;
 
   unidadesDisponibles: string[] = ['Planeación', 'Finanzas'];
   unidadesOrganicas: any[] = [
@@ -551,31 +571,31 @@ anexosBinarios: File[] = [];
   }
 
   agregarDependencia() {
-    if (!this.nuevaDependencia.unidadNombre || !this.nuevaDependencia.oficinaNombre) {
-      alert("⚠️ Error: Debes completar la Unidad y la Oficina.");
+    if (!this.nuevaDependencia.codUnidad || !this.nuevaDependencia.unidadNombre ||
+        !this.nuevaDependencia.codOficina || !this.nuevaDependencia.oficinaNombre) {
+      Swal.fire('Campos incompletos', 'Todos los campos son obligatorios.', 'warning');
       return;
     }
 
-    // MAPEO SEGÚN PYDANTIC EN EL BACKEND
     const payload = {
       entidad: this.entidadInfo.nombre,
+      cod_unidad: this.nuevaDependencia.codUnidad,
       unidad_administrativa: this.nuevaDependencia.unidadNombre,
-      oficina_productora: this.nuevaDependencia.oficinaNombre,
-      relacion_jerarquica: this.nuevaDependencia.unidadRelacionada || 'Nivel Raíz'
+      cod_oficina: this.nuevaDependencia.codOficina,
+      oficina_productora: this.nuevaDependencia.oficinaNombre
     };
 
-    // console.log("%c--- ENVIANDO ESTRUCTURA A SQL ---", "color: #2563eb; font-weight: bold;");
-    
     this.http.post(`${this.apiUrl}/admin/registrar-dependencia`, payload)
       .subscribe({
-        next: (res: any) => {
-          alert("✅ Estructura vinculada y guardada en PostgreSQL.");
-          this.cargarEstructura(); // Sincronizamos con la DB
-          this.nuevaDependencia = { unidadNombre: '', oficinaNombre: '', unidadRelacionada: '' };
+        next: () => {
+          Swal.fire('✅ Guardado', 'Dependencia registrada correctamente.', 'success');
+          this.cargarEstructura();
+          this.nuevaDependencia = { codUnidad: '', unidadNombre: '', codOficina: '', oficinaNombre: '' };
+          this.mostrarModalDependencia = false;
           this.cd.detectChanges();
         },
         error: (err) => {
-          alert("❌ Error en el servidor: " + (err.error?.detail || "Fallo de conexión"));
+          Swal.fire('Error', err.error?.detail || 'No se pudo guardar la dependencia.', 'error');
         }
       });
   }

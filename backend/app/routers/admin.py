@@ -112,8 +112,8 @@ async def cambiar_estado_usuario(request: Request, data: UserStatusUpdate, admin
 async def registrar_dependencia(request: Request, data: DependenciaCreate, admin_info: dict = Depends(obtener_admin_actual)):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO estructura_organica (entidad, unidad, oficina, depende_de) VALUES (?, ?, ?, ?)",
-                (data.entidad, data.unidad_administrativa, data.oficina_productora, data.relacion_jerarquica))
+    cur.execute("INSERT INTO estructura_organica (entidad, cod_unidad, unidad, cod_oficina, oficina) VALUES (?, ?, ?, ?, ?)",
+                (data.entidad, data.cod_unidad, data.unidad_administrativa, data.cod_oficina, data.oficina_productora))
     conn.commit()
     registrar_evento(admin_info['id'], 'CONFIG_ESTRUCTURA', 'ADMIN', f"Nueva: {data.oficina_productora}", request)
     cur.close()

@@ -5,9 +5,10 @@ from pydantic import BaseModel, field_validator
 # ─── Dependencias / Estructura orgánica ───────────────────────────────────
 class DependenciaCreate(BaseModel):
     entidad: str
+    cod_unidad: str
     unidad_administrativa: str
+    cod_oficina: str
     oficina_productora: str
-    relacion_jerarquica: Optional[str] = "Nivel Raíz"
 
 
 class DependenciaResponse(BaseModel):
