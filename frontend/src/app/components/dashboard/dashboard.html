@@ -316,7 +316,7 @@
     <div class="tab-item" [class.active]="tabActivaVentanilla === 'recibidas'" (click)="cambiarTabVentanilla('recibidas')">Comunicaciones Recibidas</div>
     <div class="tab-item" [class.active]="tabActivaVentanilla === 'enviadas'" (click)="cambiarTabVentanilla('enviadas')">Comunicaciones Enviadas</div>
     <div class="tab-item" [class.active]="tabActivaVentanilla === 'internas'" (click)="cambiarTabVentanilla('internas')">Comunicaciones Internas</div>
-    <div class="tab-item" [class.active]="tabActivaVentanilla === 'no-radicables'" (click)="cambiarTabVentanilla('no-radicables')">Comunicaciones No Radicables</div>
+    <div *ngIf="userRole <= 1" class="tab-item" [class.active]="tabActivaVentanilla === 'no-radicables'" (click)="cambiarTabVentanilla('no-radicables')">Comunicaciones No Radicables</div>
     <div *ngIf="userRole <= 1" class="tab-item" [class.active]="tabActivaVentanilla === 'facturas-dian'" (click)="cambiarTabVentanilla('facturas-dian'); cargarFacturasDian()">🧾 Facturas DIAN</div>
   </div>
 
@@ -421,42 +421,12 @@
           <div>
             <label class="siade-label">Tipo Documental</label>
               <select [(ngModel)]="radicado.tipoDocumental" class="siade-select">
-                <option value="">-- Seleccione Formato --</option>
-                <optgroup label="Documentos">
-                  <option value="PDF">PDF</option>
-                  <option value="DOCX">DOCX</option>
-                  <option value="DOC">DOC</option>
-                  <option value="XLSX">XLSX</option>
-                  <option value="XLS">XLS</option>
-                  <option value="PPTX">PPTX</option>
-                  <option value="TXT">TXT</option>
-                  <option value="CSV">CSV</option>
-                  <option value="ODT">ODT</option>
-                </optgroup>
-                <optgroup label="Imágenes">
-                  <option value="PNG">PNG</option>
-                  <option value="JPG">JPG</option>
-                  <option value="JPEG">JPEG</option>
-                  <option value="TIFF">TIFF</option>
-                  <option value="BMP">BMP</option>
-                  <option value="SVG">SVG</option>
-                </optgroup>
-                <optgroup label="Comprimidos">
-                  <option value="ZIP">ZIP</option>
-                  <option value="RAR">RAR</option>
-                  <option value="7Z">7Z</option>
-                </optgroup>
-                <optgroup label="Multimedia">
-                  <option value="MP4">MP4</option>
-                  <option value="MP3">MP3</option>
-                  <option value="AVI">AVI</option>
-                </optgroup>
-                <optgroup label="Datos / Técnicos">
-                  <option value="XML">XML</option>
-                  <option value="JSON">JSON</option>
-                  <option value="MSG">MSG (Correo)</option>
-                </optgroup>
+                <option value="">-- Seleccione Tipo Documental --</option>
+                <option *ngFor="let tipo of getTiposParaSelect()" [value]="tipo">{{ tipo }}</option>
               </select>
+              <span *ngIf="radicado.tipoDocumental" style="display:inline-flex; align-items:center; gap:0.3rem; margin-top:0.35rem; font-size:0.72rem; font-weight:700; color:#64748b; letter-spacing:0.03em;">
+                <span style="background:#fee2e2; color:#dc2626; padding:0.1rem 0.45rem; border-radius:4px; font-size:0.68rem; font-weight:800;">PDF</span> Formato del documento
+              </span>
           </div>
         </div>
         <div class="siade-row-1">
@@ -677,42 +647,12 @@
           <div>
             <label class="siade-label">Tipo Documental</label>
               <select [(ngModel)]="radicado.tipoDocumental" class="siade-select">
-                <option value="">-- Seleccione Formato --</option>
-                <optgroup label="Documentos">
-                  <option value="PDF">PDF</option>
-                  <option value="DOCX">DOCX</option>
-                  <option value="DOC">DOC</option>
-                  <option value="XLSX">XLSX</option>
-                  <option value="XLS">XLS</option>
-                  <option value="PPTX">PPTX</option>
-                  <option value="TXT">TXT</option>
-                  <option value="CSV">CSV</option>
-                  <option value="ODT">ODT</option>
-                </optgroup>
-                <optgroup label="Imágenes">
-                  <option value="PNG">PNG</option>
-                  <option value="JPG">JPG</option>
-                  <option value="JPEG">JPEG</option>
-                  <option value="TIFF">TIFF</option>
-                  <option value="BMP">BMP</option>
-                  <option value="SVG">SVG</option>
-                </optgroup>
-                <optgroup label="Comprimidos">
-                  <option value="ZIP">ZIP</option>
-                  <option value="RAR">RAR</option>
-                  <option value="7Z">7Z</option>
-                </optgroup>
-                <optgroup label="Multimedia">
-                  <option value="MP4">MP4</option>
-                  <option value="MP3">MP3</option>
-                  <option value="AVI">AVI</option>
-                </optgroup>
-                <optgroup label="Datos / Técnicos">
-                  <option value="XML">XML</option>
-                  <option value="JSON">JSON</option>
-                  <option value="MSG">MSG (Correo)</option>
-                </optgroup>
+                <option value="">-- Seleccione Tipo Documental --</option>
+                <option *ngFor="let tipo of getTiposParaSelect()" [value]="tipo">{{ tipo }}</option>
               </select>
+              <span *ngIf="radicado.tipoDocumental" style="display:inline-flex; align-items:center; gap:0.3rem; margin-top:0.35rem; font-size:0.72rem; font-weight:700; color:#64748b; letter-spacing:0.03em;">
+                <span style="background:#fee2e2; color:#dc2626; padding:0.1rem 0.45rem; border-radius:4px; font-size:0.68rem; font-weight:800;">PDF</span> Formato del documento
+              </span>
           </div>
         </div>
         <div class="siade-row-1">
@@ -873,42 +813,12 @@
           <div>
             <label class="siade-label">Tipo Documental</label>
               <select [(ngModel)]="radicado.tipoDocumental" class="siade-select">
-                <option value="">-- Seleccione Formato --</option>
-                <optgroup label="Documentos">
-                  <option value="PDF">PDF</option>
-                  <option value="DOCX">DOCX</option>
-                  <option value="DOC">DOC</option>
-                  <option value="XLSX">XLSX</option>
-                  <option value="XLS">XLS</option>
-                  <option value="PPTX">PPTX</option>
-                  <option value="TXT">TXT</option>
-                  <option value="CSV">CSV</option>
-                  <option value="ODT">ODT</option>
-                </optgroup>
-                <optgroup label="Imágenes">
-                  <option value="PNG">PNG</option>
-                  <option value="JPG">JPG</option>
-                  <option value="JPEG">JPEG</option>
-                  <option value="TIFF">TIFF</option>
-                  <option value="BMP">BMP</option>
-                  <option value="SVG">SVG</option>
-                </optgroup>
-                <optgroup label="Comprimidos">
-                  <option value="ZIP">ZIP</option>
-                  <option value="RAR">RAR</option>
-                  <option value="7Z">7Z</option>
-                </optgroup>
-                <optgroup label="Multimedia">
-                  <option value="MP4">MP4</option>
-                  <option value="MP3">MP3</option>
-                  <option value="AVI">AVI</option>
-                </optgroup>
-                <optgroup label="Datos / Técnicos">
-                  <option value="XML">XML</option>
-                  <option value="JSON">JSON</option>
-                  <option value="MSG">MSG (Correo)</option>
-                </optgroup>
+                <option value="">-- Seleccione Tipo Documental --</option>
+                <option *ngFor="let tipo of getTiposParaSelect()" [value]="tipo">{{ tipo }}</option>
               </select>
+              <span *ngIf="radicado.tipoDocumental" style="display:inline-flex; align-items:center; gap:0.3rem; margin-top:0.35rem; font-size:0.72rem; font-weight:700; color:#64748b; letter-spacing:0.03em;">
+                <span style="background:#fee2e2; color:#dc2626; padding:0.1rem 0.45rem; border-radius:4px; font-size:0.68rem; font-weight:800;">PDF</span> Formato del documento
+              </span>
           </div>
         </div>
         <div class="siade-row-1">
@@ -975,7 +885,7 @@
     </aside>
   </div>
 
-  <div *ngIf="tabActivaVentanilla === 'no-radicables'" class="ventanilla-layout">
+  <div *ngIf="tabActivaVentanilla === 'no-radicables' && userRole <= 1" class="ventanilla-layout">
     
     <div class="form-capture-area">
       
@@ -1420,11 +1330,11 @@
               </div>
               <div style="display:grid; grid-template-columns:1fr 2fr; gap:1rem; margin-bottom:1.75rem;">
                 <div>
-                  <label class="siade-label">Cód. Oficina</label>
+                  <label class="siade-label">Cód. Oficina <span style="color:#94a3b8; font-weight:500;">(opcional)</span></label>
                   <input type="text" [(ngModel)]="nuevaDependencia.codOficina" class="siade-input" placeholder="Ej: 101" style="text-align:center; font-family:monospace; font-weight:700;">
                 </div>
                 <div>
-                  <label class="siade-label">Oficina Productora</label>
+                  <label class="siade-label">Oficina Productora <span style="color:#94a3b8; font-weight:500;">(opcional)</span></label>
                   <input type="text" [(ngModel)]="nuevaDependencia.oficinaNombre" class="siade-input" placeholder="Ej: Oficina Asesora Jurídica">
                 </div>
               </div>
@@ -1453,7 +1363,7 @@
                   <td><span style="font-family: monospace; font-weight: 700; color: #2563eb;">{{ getCodUnidad(u) }}</span></td>
                   <td><strong style="color: #1a2b4b;">{{ u.unidad }}</strong></td>
                   <td><span style="font-family: monospace; font-weight: 700; color: #7c3aed;">{{ getCodOficina(u) }}</span></td>
-                  <td>{{ u.oficina }}</td>
+                  <td>{{ (u.oficina && u.oficina !== u.unidad) ? u.oficina : '' }}</td>
                   <td style="text-align: center;">
                     <span (click)="editarUnidad(i)" style="cursor: pointer; margin-right: 1rem;">📝</span>
                     <span (click)="eliminarUnidad(i)" style="cursor: pointer; color: #ef4444;">🗑️</span>
@@ -1480,6 +1390,10 @@
                   <span class="check-icon" [style.color]="role.color">✓</span> {{ permiso }}
                 </li>
               </ul>
+              <div *ngIf="role.hereda" class="role-hereda" [style.border-color]="role.color">
+                <span class="role-hereda-label" [style.color]="role.color">Incluye facultades de</span>
+                <span class="role-hereda-nombre">{{ role.hereda }}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -1496,7 +1410,7 @@
             <thead>
               <tr>
                 <th>Funcionario</th>
-                <th>Identificador</th>
+                <th>Usuario</th>
                 <th>Correo</th>
                 <th>Rol</th>
                 <th>Estado</th>

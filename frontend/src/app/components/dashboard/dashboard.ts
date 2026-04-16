@@ -105,13 +105,14 @@ anexosBinarios: File[] = [];
 
   // --- CONFIGURACIÓN DEL MENÚ DINÁMICO ---
   menuItems = [
-    { label: 'Dashboard', icon: '📈', roles: [0, 1, 2, 3] },
-    { label: 'Ventanilla Única', icon: '📥', roles: [0, 1, 2] },
-    { label: 'Configuración', icon: '⚙️', roles: [0, 1] },
+    { label: 'Dashboard',          icon: '📈', roles: [0, 1, 2, 3] },
     { label: 'Gestión Documental', icon: '📁', roles: [0, 1, 2] },
-    { label: 'Flujos de Trabajo', icon: '🌿', roles: [0, 1] },
-    { label: 'Archivo Central', icon: '📦', roles: [0, 1] },
-    { label: 'Informes', icon: '📊', roles: [0, 1] }
+    { label: 'Flujos de Trabajo',  icon: '🌿', roles: [0, 1] },
+    { label: 'Ventanilla Única',   icon: '📥', roles: [0, 1, 2] },
+    { label: 'Archivo Central',    icon: '📦', roles: [0, 1] },
+    { label: 'Archivo Histórico',  icon: '🏛️', roles: [0, 1] },
+    { label: 'Informes',           icon: '📊', roles: [0, 1] },
+    { label: 'Configuración',      icon: '⚙️', roles: [0, 1] }
   ];
 
   // --- LÓGICA DE NAVEGACIÓN ---
@@ -173,6 +174,8 @@ anexosBinarios: File[] = [];
   // Función para cambiar pestañas de ventanilla
   cambiarTabVentanilla(tab: string) {
     this.tabActivaVentanilla = tab;
+    this.formSubmitted = false;
+    this.erroresForm = {};
     this.cd.detectChanges();
   }
 
@@ -188,19 +191,22 @@ anexosBinarios: File[] = [];
       nombre: 'Administrador',
       nivel: 'Nivel 1',
       color: '#7c3aed',
-      permisos: ['Carga/Descarga de Tablas de Configuración', 'Gestión de Sedes, Unidades y Oficinas', 'Administración de TRD (Series/Subseries)', 'Diseño de flujos y anulación de registros']
+      permisos: ['Carga/Descarga de Tablas de Configuración', 'Gestión de Sedes, Unidades y Oficinas', 'Administración de TRD (Series/Subseries)', 'Diseño de flujos y anulación de registros'],
+      hereda: 'Usuario Productor'
     },
     {
       nombre: 'Usuario Productor',
       nivel: 'Nivel 2',
       color: '#d97706',
-      permisos: ['Radicar comunicaciones', 'Aprobar y Trasladar documentos', 'Remitir y Archivar correspondencia', 'Devolver e Imprimir registros oficiales']
+      permisos: ['Radicar comunicaciones', 'Aprobar y Trasladar documentos', 'Remitir y Archivar correspondencia', 'Devolver e Imprimir registros oficiales'],
+      hereda: 'Usuario Consultor'
     },
     {
       nombre: 'Usuario Consultor',
       nivel: 'Nivel 3',
       color: '#64748b',
-      permisos: ['Búsqueda y consulta de documentos', 'Visualización de expedientes públicos', 'Generación de reportes básicos']
+      permisos: ['Búsqueda y consulta de documentos', 'Visualización de expedientes públicos', 'Generación de reportes básicos'],
+      hereda: null
     }
   ];
 
@@ -490,7 +496,7 @@ anexosBinarios: File[] = [];
 
   // ── Códigos para tabla de estructura orgánica (vienen directo de la BD) ──────
   getCodUnidad(u: any): string { return u.cod_unidad || '--'; }
-  getCodOficina(u: any): string { return u.cod_oficina || '--'; }
+  getCodOficina(u: any): string { return u.cod_oficina || ''; }
 
   // ── Auto-fill TRD: Unidad ────────────────────────────────────────────────────
   getOficinasDeUnidad(): string[] {
@@ -571,9 +577,8 @@ anexosBinarios: File[] = [];
   }
 
   agregarDependencia() {
-    if (!this.nuevaDependencia.codUnidad || !this.nuevaDependencia.unidadNombre ||
-        !this.nuevaDependencia.codOficina || !this.nuevaDependencia.oficinaNombre) {
-      Swal.fire('Campos incompletos', 'Todos los campos son obligatorios.', 'warning');
+    if (!this.nuevaDependencia.codUnidad || !this.nuevaDependencia.unidadNombre) {
+      Swal.fire('Campos incompletos', 'El código y nombre de la unidad administrativa son obligatorios.', 'warning');
       return;
     }
 
@@ -612,11 +617,13 @@ anexosBinarios: File[] = [];
 
   validarFormulario(): boolean {
     this.erroresForm = {};
+    const esNOR = this.tabActivaVentanilla === 'no-radicables';
+
     if (!this.radicado.nombreRemitente?.trim())
       this.erroresForm['nombreRemitente'] = 'Campo requerido';
     if (!this.radicado.asunto?.trim())
       this.erroresForm['asunto'] = 'Campo requerido';
-    if (!this.radicado.serie)
+    if (!esNOR && !this.radicado.serie)
       this.erroresForm['serie'] = 'Seleccione una serie';
     if (!this.archivoBinarioPrincipal)
       this.erroresForm['archivoPrincipal'] = 'Debe adjuntar el documento principal';
@@ -1844,9 +1851,37 @@ limpiarFormularioRadicacion() {
     if (!this.radicado.serie || !this.listaTRD) return [];
     const tipos = this.listaTRD
       .filter(item => (item.serie || '').toString() === this.radicado.serie.toString())
-      .map(item => (item.tipo_documental || '').toString().trim()); // ¡Ya existe!
-      
+      .map(item => (item.tipo_documental || '').toString().trim());
     return [...new Set(tipos)].filter(t => t !== '');
+  }
+
+  // Lista demo — reemplazar con datos reales de TRD cuando estén disponibles
+  tiposDocumentalesDemo: string[] = [
+    'Queja, informe',
+    'Auto inhibitorio',
+    'Auto de apertura',
+    'Citación de notificación',
+    'Edicto',
+    'Práctica de pruebas ordenadas',
+    'Recurso de apelación',
+    'Auto de investigación',
+    'Auto de prórroga',
+    'Auto de pliego de cargos',
+    'Auto de archivo',
+    'Defensor de oficio',
+    'Auto de pruebas',
+    'Recurso en primera instancia',
+    'Alegato de conclusión',
+    'Fallo de primera instancia',
+    'Recurso proceso disciplinario',
+    'Fallo de segunda instancia',
+    'Antecedentes disciplinarios',
+    'Acto administrativo'
+  ];
+
+  getTiposParaSelect(): string[] {
+    const fromTRD = this.getTiposDocumentalesUnicos();
+    return fromTRD.length > 0 ? fromTRD : this.tiposDocumentalesDemo;
   }
 
       // --- ACCIONES SIADE ---

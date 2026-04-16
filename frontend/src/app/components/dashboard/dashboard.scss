@@ -328,6 +328,31 @@ textarea.siade-input {
       .check-icon { font-weight: 900; font-size: 1rem; }
     }
   }
+
+  .role-hereda {
+    margin-top: 1.2rem;
+    padding: 0.65rem 1rem;
+    border: 1px dashed;
+    border-radius: 0.6rem;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .role-hereda-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .role-hereda-nombre {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #1a2b4b;
+    }
+  }
 }
 
 // --- COMPONENTES DE TABLA ---
