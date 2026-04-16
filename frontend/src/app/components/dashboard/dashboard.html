@@ -17,7 +17,7 @@
              'selected': (item.label === 'Dashboard'           && seccionActiva === 'dashboard')          ||
                          (item.label === 'Ventanilla Única'    && seccionActiva === 'ventanilla')         ||
                          (item.label === 'Configuración'       && seccionActiva === 'configuracion')      ||
-                         (item.label === 'Gestión Documental'  && seccionActiva === 'gestion-documental') ||
+                         (item.label === 'Buzón'               && seccionActiva === 'gestion-documental') ||
                          (item.label === 'Flujos de Trabajo'   && seccionActiva === 'flujos')             ||
                          (item.label === 'Archivo Central'     && seccionActiva === 'archivo-central')    ||
                          (item.label === 'Informes'            && seccionActiva === 'informes')
@@ -1690,14 +1690,13 @@
     <ng-container *ngIf="seccionActiva === 'gestion-documental'">
       <header style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h2 style="font-size: 1.4rem; font-weight: 900; text-transform: uppercase; margin: 0; color: #1a2b4b;">Gestión Documental</h2>
+          <h2 style="font-size: 1.4rem; font-weight: 900; text-transform: uppercase; margin: 0; color: #1a2b4b;">Buzón</h2>
           <p style="color: #64748b; font-weight: 600; margin: 0; font-size: 0.8rem;">
             {{ userRole <= 1 ? 'Vista Administrador — todos los radicados' : 'Mis radicados asignados' }}
           </p>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
           <button (click)="cargarRadicados()" class="btn-siade secondary" style="white-space: nowrap;">🔄 Actualizar</button>
-          <!-- Campana de notificaciones -->
           <div style="position: relative; cursor: pointer;" (click)="cargarNotificaciones()">
             <span style="font-size: 1.6rem;">🔔</span>
             <span *ngIf="notificacionesSinLeer > 0"
@@ -1709,6 +1708,221 @@
           </div>
         </div>
       </header>
+
+      <!-- ══════════════════════════════════════════════════════ BUZÓN ══ -->
+      <section class="content-card" style="margin-bottom: 1.5rem; padding: 0; overflow: visible;">
+
+        <!-- Tabs -->
+        <div style="display: flex; border-bottom: 2px solid #e2e8f0;">
+          <button (click)="cambiarTabBuzon('recibidos')"
+                  [style.background]="tabBuzon === 'recibidos' ? '#eff6ff' : 'transparent'"
+                  [style.color]="tabBuzon === 'recibidos' ? '#1d4ed8' : '#64748b'"
+                  [style.border-bottom]="tabBuzon === 'recibidos' ? '2px solid #2563eb' : '2px solid transparent'"
+                  style="padding: 0.85rem 1.5rem; font-weight: 800; font-size: 0.88rem; border: none; border-radius: 0; cursor: pointer; transition: all 0.2s; margin-bottom: -2px;">
+            📥 Recibidos
+          </button>
+          <button (click)="cambiarTabBuzon('enviados')"
+                  [style.background]="tabBuzon === 'enviados' ? '#f0fdf4' : 'transparent'"
+                  [style.color]="tabBuzon === 'enviados' ? '#15803d' : '#64748b'"
+                  [style.border-bottom]="tabBuzon === 'enviados' ? '2px solid #16a34a' : '2px solid transparent'"
+                  style="padding: 0.85rem 1.5rem; font-weight: 800; font-size: 0.88rem; border: none; border-radius: 0; cursor: pointer; transition: all 0.2s; margin-bottom: -2px;">
+            📤 Enviados
+          </button>
+          <button (click)="cambiarTabBuzon('redactar')"
+                  [style.background]="tabBuzon === 'redactar' ? '#faf5ff' : 'transparent'"
+                  [style.color]="tabBuzon === 'redactar' ? '#7c3aed' : '#64748b'"
+                  [style.border-bottom]="tabBuzon === 'redactar' ? '2px solid #7c3aed' : '2px solid transparent'"
+                  style="padding: 0.85rem 1.5rem; font-weight: 800; font-size: 0.88rem; border: none; border-radius: 0; cursor: pointer; transition: all 0.2s; margin-bottom: -2px;">
+            ✏️ Redactar
+          </button>
+        </div>
+
+        <!-- Filtros -->
+        <div *ngIf="tabBuzon !== 'redactar'" style="padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9;">
+          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">Organizar por:</span>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button *ngFor="let f of [{k:'fecha',l:'Fecha'},{k:'radicado',l:'Radicado'},{k:'serie',l:'Serie Documental'},{k:'remitente',l:'Remitente'},{k:'destinatario',l:'Destinatario'},{k:'asunto',l:'Asunto'}]"
+                      (click)="cambiarFiltroBuzon(f.k)"
+                      [style.background]="filtroOrganizarBuzon === f.k ? '#1a2b4b' : '#f1f5f9'"
+                      [style.color]="filtroOrganizarBuzon === f.k ? 'white' : '#475569'"
+                      style="padding: 0.3rem 0.85rem; border: none; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.18s;">
+                {{ f.l }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Rango de fecha -->
+          <div *ngIf="filtroOrganizarBuzon === 'fecha'"
+               style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.9rem;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Desde</span>
+            <input type="date" [(ngModel)]="fechaInicioBuzon" class="siade-input" style="width: auto;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Hasta</span>
+            <input type="date" [(ngModel)]="fechaFinBuzon" class="siade-input" style="width: auto;">
+            <button (click)="fechaInicioBuzon=''; fechaFinBuzon=''" class="btn-siade secondary" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">✕ Limpiar</button>
+          </div>
+
+          <!-- Autocomplete -->
+          <div *ngIf="filtroOrganizarBuzon && filtroOrganizarBuzon !== 'fecha'"
+               style="position: relative; margin-top: 0.9rem; max-width: 420px;">
+            <input type="text"
+                   [(ngModel)]="textoBuzonFiltro"
+                   (input)="mostrarSugerenciasBuzon = true"
+                   (blur)="mostrarSugerenciasBuzon && $event.relatedTarget ? null : (mostrarSugerenciasBuzon = false)"
+                   [placeholder]="'Buscar por ' + filtroOrganizarBuzon + '...'"
+                   class="siade-input"
+                   style="padding-right: 2.2rem;">
+            <span *ngIf="textoBuzonFiltro"
+                  (click)="textoBuzonFiltro=''; mostrarSugerenciasBuzon=false"
+                  style="position:absolute; right:0.7rem; top:50%; transform:translateY(-50%); cursor:pointer; color:#94a3b8; font-size:1rem;">✕</span>
+            <!-- Dropdown sugerencias -->
+            <div *ngIf="mostrarSugerenciasBuzon && getSugerenciasBuzon().length > 0"
+                 style="position:absolute; top:calc(100% + 4px); left:0; right:0; background:white;
+                        border:1px solid #e2e8f0; border-radius:0.6rem; box-shadow:0 8px 24px rgba(0,0,0,0.1);
+                        z-index:200; overflow:hidden;">
+              <div *ngFor="let s of getSugerenciasBuzon()"
+                   (mousedown)="seleccionarSugerenciaBuzon(s)"
+                   style="padding:0.6rem 1rem; font-size:0.83rem; font-weight:600; color:#1a2b4b;
+                          cursor:pointer; border-bottom:1px solid #f8fafc;"
+                   onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='white'">
+                {{ s }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla Recibidos / Enviados -->
+        <div *ngIf="tabBuzon !== 'redactar'" style="overflow-x: auto;">
+          <table class="siade-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>N° Radicado</th>
+                <th>Tipo</th>
+                <th>Remitente</th>
+                <th style="max-width:260px;">Asunto</th>
+                <th>Vencimiento</th>
+                <th style="text-align:center; width:80px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of getBuzonFiltrado()">
+                <td><strong style="color:#2563eb; font-family:monospace; font-size:0.85rem;">{{ r.nro_radicado }}</strong></td>
+                <td>
+                  <span class="badge-siade"
+                    [ngStyle]="{
+                      'background': (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? '#dbeafe' :
+                                    (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? '#dcfce7' :
+                                    (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? '#fef9c3' : '#f1f5f9',
+                      'color':      (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? '#1d4ed8' :
+                                    (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? '#15803d' :
+                                    (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? '#854d0e' : '#475569'
+                    }">
+                    {{ (r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS') ? 'RECIBIDA' :
+                       (r.tipo_radicado === 'ENVIADA'  || r.tipo_radicado === 'ENVIADAS')  ? 'ENVIADA'  :
+                       (r.tipo_radicado === 'INTERNA'  || r.tipo_radicado === 'INTERNAS')  ? 'INTERNA'  : r.tipo_radicado }}
+                  </span>
+                </td>
+                <td style="font-size:0.85rem;">{{ r.nombre_razon_social || '—' }}</td>
+                <td style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85rem;">{{ r.asunto || '—' }}</td>
+                <td>
+                  <span [ngStyle]="{'color': r.fecha_vencimiento && r.fecha_vencimiento < fechaActualRadicado ? '#ef4444' : '#16a34a',
+                                    'font-weight': '700', 'font-size': '0.82rem'}">
+                    {{ r.fecha_vencimiento || '—' }}
+                  </span>
+                </td>
+                <td style="text-align:center;">
+                  <button (click)="abrirAccionesBuzon(r)"
+                          style="background:#1a2b4b; color:white; border:none; border-radius:6px;
+                                 padding:0.3rem 0.7rem; font-size:1rem; cursor:pointer; line-height:1;"
+                          title="Ver acciones">⋮</button>
+                </td>
+              </tr>
+              <tr *ngIf="getBuzonFiltrado().length === 0">
+                <td colspan="6" style="text-align:center; color:#94a3b8; padding:2.5rem; font-weight:600;">
+                  No hay radicados en este buzón.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab Redactar (placeholder) -->
+        <div *ngIf="tabBuzon === 'redactar'"
+             style="padding: 3rem; text-align: center; color: #94a3b8;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.8rem;">✏️</div>
+          <p style="font-weight: 700; font-size: 1rem; margin: 0;">Módulo de redacción en construcción</p>
+          <p style="font-size: 0.82rem; margin-top: 0.3rem;">Próximamente disponible</p>
+        </div>
+
+      </section>
+
+      <!-- Pop-up Acciones Buzón -->
+      <div *ngIf="mostrarPopupAccionesBuzon"
+           (click)="cerrarAccionesBuzon()"
+           style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1000;
+                  display:flex; align-items:center; justify-content:center;">
+        <div (click)="$event.stopPropagation()"
+             style="background:white; border-radius:1rem; padding:2rem 2.5rem; min-width:280px;
+                    box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative; text-align:center;">
+          <!-- Cerrar -->
+          <button (click)="cerrarAccionesBuzon()"
+                  style="position:absolute; top:0.8rem; right:0.9rem; background:none; border:none;
+                         font-size:1.2rem; color:#94a3b8; cursor:pointer; line-height:1;">✕</button>
+          <!-- Radicado -->
+          <p style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+                    letter-spacing:0.05em; margin:0 0 0.2rem;">Radicado</p>
+          <p style="font-size:1.05rem; font-weight:900; color:#1a2b4b; margin:0 0 1.5rem; font-family:monospace;">
+            {{ radicadoBuzonAcciones?.nro_radicado }}
+          </p>
+          <!-- Botones de acción -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem;">
+            <button style="padding:0.6rem 1rem; background:#eff6ff; color:#1d4ed8; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              ✅ Aprobar
+            </button>
+            <button style="padding:0.6rem 1rem; background:#fef9c3; color:#854d0e; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              🔄 Trasladar
+            </button>
+            <button style="padding:0.6rem 1rem; background:#f0fdf4; color:#15803d; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              📤 Remitir
+            </button>
+            <button style="padding:0.6rem 1rem; background:#f1f5f9; color:#475569; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              📦 Archivar
+            </button>
+            <button style="padding:0.6rem 1rem; background:#faf5ff; color:#7c3aed; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              🖨️ Imprimir
+            </button>
+            <button style="padding:0.6rem 1rem; background:#fff1f2; color:#be123c; border:none;
+                           border-radius:0.5rem; font-weight:800; font-size:0.85rem; cursor:pointer;">
+              ↩ Devolver
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- ════════════════════════════════════════════ FIN BUZÓN ══ -->
+
+      <!-- Notificaciones -->
+      <div *ngIf="notificaciones.length > 0" style="margin-bottom: 1.5rem;">
+        <div *ngFor="let n of notificaciones | slice:0:3"
+             [style.background]="n.leida ? '#f8fafc' : '#eff6ff'"
+             style="padding: 0.8rem 1.2rem; border-radius: 0.8rem; margin-bottom: 0.5rem;
+                    border-left: 4px solid #2563eb; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; font-weight: 600; color: #1a2b4b;">
+            🔔 {{ n.mensaje }} <span style="color:#94a3b8; font-weight:400;">· {{ n.fecha | slice:0:16 }}</span>
+          </span>
+          <button *ngIf="!n.leida" (click)="marcarLeida(n.id)"
+                  style="background: none; border: none; color: #2563eb; font-size: 0.75rem; cursor: pointer; font-weight: 700;">
+            Marcar leída ✓
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ TABLA ADMIN (solo Super Admin y Administrador) ══ -->
+      <ng-container *ngIf="userRole <= 1">
 
       <!-- Panel de filtros -->
       <section class="content-card" style="margin-bottom: 1rem; padding: 0.8rem 1.2rem;">
@@ -1920,6 +2134,10 @@
         · {{ paginacionRadicados.per_page }} por página
         <span *ngIf="userRole > 1"> · Solo se muestran los radicados en los que participas</span>
       </div>
+
+      </ng-container>
+      <!-- ══ FIN TABLA ADMIN ══ -->
+
     </ng-container>
 
     <!-- ===== SECCIÓN: FLUJOS DE TRABAJO ===== -->

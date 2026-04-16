@@ -106,7 +106,7 @@ anexosBinarios: File[] = [];
   // --- CONFIGURACIÓN DEL MENÚ DINÁMICO ---
   menuItems = [
     { label: 'Dashboard',          icon: '📈', roles: [0, 1, 2, 3] },
-    { label: 'Gestión Documental', icon: '📁', roles: [0, 1, 2] },
+    { label: 'Buzón',              icon: '📬', roles: [0, 1, 2] },
     { label: 'Flujos de Trabajo',  icon: '🌿', roles: [0, 1] },
     { label: 'Ventanilla Única',   icon: '📥', roles: [0, 1, 2] },
     { label: 'Archivo Central',    icon: '📦', roles: [0, 1] },
@@ -142,7 +142,7 @@ anexosBinarios: File[] = [];
         this.tabActivaVentanilla = 'recibidas';
         break;
 
-      case 'Gestión Documental':
+      case 'Buzón':
         this.seccionActiva = 'gestion-documental';
         this.cargarRadicados();
         break;
@@ -177,6 +177,81 @@ anexosBinarios: File[] = [];
     this.formSubmitted = false;
     this.erroresForm = {};
     this.cd.detectChanges();
+  }
+
+  // --- BUZÓN ---
+  cambiarTabBuzon(tab: string) {
+    this.tabBuzon = tab;
+    this.filtroOrganizarBuzon = '';
+    this.textoBuzonFiltro = '';
+    this.fechaInicioBuzon = '';
+    this.fechaFinBuzon = '';
+    this.mostrarSugerenciasBuzon = false;
+  }
+
+  cambiarFiltroBuzon(filtro: string) {
+    this.filtroOrganizarBuzon = this.filtroOrganizarBuzon === filtro ? '' : filtro;
+    this.textoBuzonFiltro = '';
+    this.fechaInicioBuzon = '';
+    this.fechaFinBuzon = '';
+    this.mostrarSugerenciasBuzon = false;
+  }
+
+  getSugerenciasBuzon(): string[] {
+    if (!this.textoBuzonFiltro.trim()) return [];
+    const q = this.textoBuzonFiltro.toLowerCase();
+    let valores: string[] = [];
+    const lista = this.radicadosFiltrados || [];
+    switch (this.filtroOrganizarBuzon) {
+      case 'radicado':    valores = lista.map((r: any) => r.nro_radicado); break;
+      case 'serie':       valores = lista.map((r: any) => r.serie); break;
+      case 'remitente':   valores = lista.map((r: any) => r.nombre_razon_social); break;
+      case 'destinatario':valores = lista.map((r: any) => r.destinatario); break;
+      case 'asunto':      valores = lista.map((r: any) => r.asunto); break;
+    }
+    return [...new Set(valores)].filter((v: any) => v && v.toLowerCase().includes(q)).slice(0, 8) as string[];
+  }
+
+  seleccionarSugerenciaBuzon(val: string) {
+    this.textoBuzonFiltro = val;
+    this.mostrarSugerenciasBuzon = false;
+  }
+
+  getBuzonFiltrado(): any[] {
+    let lista: any[] = this.radicadosFiltrados || [];
+    // Filtrar por tab
+    if (this.tabBuzon === 'recibidos') {
+      lista = lista.filter((r: any) => r.tipo_radicado === 'RECIBIDA' || r.tipo_radicado === 'RECIBIDAS');
+    } else if (this.tabBuzon === 'enviados') {
+      lista = lista.filter((r: any) => r.tipo_radicado === 'ENVIADA' || r.tipo_radicado === 'ENVIADAS');
+    }
+    // Filtrar por rango de fecha
+    if (this.filtroOrganizarBuzon === 'fecha') {
+      if (this.fechaInicioBuzon) lista = lista.filter((r: any) => r.fecha_radicado >= this.fechaInicioBuzon);
+      if (this.fechaFinBuzon)    lista = lista.filter((r: any) => r.fecha_radicado <= this.fechaFinBuzon);
+    }
+    // Filtrar por texto
+    if (this.filtroOrganizarBuzon !== 'fecha' && this.textoBuzonFiltro.trim()) {
+      const q = this.textoBuzonFiltro.toLowerCase();
+      switch (this.filtroOrganizarBuzon) {
+        case 'radicado':    lista = lista.filter((r: any) => r.nro_radicado?.toLowerCase().includes(q)); break;
+        case 'serie':       lista = lista.filter((r: any) => r.serie?.toLowerCase().includes(q)); break;
+        case 'remitente':   lista = lista.filter((r: any) => r.nombre_razon_social?.toLowerCase().includes(q)); break;
+        case 'destinatario':lista = lista.filter((r: any) => r.destinatario?.toLowerCase().includes(q)); break;
+        case 'asunto':      lista = lista.filter((r: any) => r.asunto?.toLowerCase().includes(q)); break;
+      }
+    }
+    return lista;
+  }
+
+  abrirAccionesBuzon(r: any) {
+    this.radicadoBuzonAcciones = r;
+    this.mostrarPopupAccionesBuzon = true;
+  }
+
+  cerrarAccionesBuzon() {
+    this.mostrarPopupAccionesBuzon = false;
+    this.radicadoBuzonAcciones = null;
   }
 
   // --- MATRIZ DE ROLES DE USUARIO ---
@@ -285,6 +360,16 @@ anexosBinarios: File[] = [];
   busquedaRadicados: string = '';
   filtrosGestion = { tipo: '', estado: '', serie: '', vencido: '' };
   paginacionRadicados = { page: 1, per_page: 50, total: 0, total_pages: 1 };
+
+  // --- BUZÓN ---
+  tabBuzon: string = 'recibidos';
+  filtroOrganizarBuzon: string = '';
+  textoBuzonFiltro: string = '';
+  fechaInicioBuzon: string = '';
+  fechaFinBuzon: string = '';
+  mostrarSugerenciasBuzon: boolean = false;
+  mostrarPopupAccionesBuzon: boolean = false;
+  radicadoBuzonAcciones: any = null;
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
