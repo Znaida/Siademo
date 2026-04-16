@@ -1362,7 +1362,7 @@
                 <tr *ngFor="let u of unidadesOrganicas; let i = index">
                   <td><span style="font-family: monospace; font-weight: 700; color: #2563eb;">{{ getCodUnidad(u) }}</span></td>
                   <td><strong style="color: #1a2b4b;">{{ u.unidad }}</strong></td>
-                  <td><span style="font-family: monospace; font-weight: 700; color: #7c3aed;">{{ getCodOficina(u) }}</span></td>
+                  <td><span style="font-family: monospace; font-weight: 700; color: #7c3aed;">{{ (u.oficina && u.oficina !== u.unidad) ? getCodOficina(u) : '' }}</span></td>
                   <td>{{ (u.oficina && u.oficina !== u.unidad) ? u.oficina : '' }}</td>
                   <td style="text-align: center;">
                     <span (click)="editarUnidad(i)" style="cursor: pointer; margin-right: 1rem;">📝</span>
