@@ -257,12 +257,25 @@ anexosBinarios: File[] = [];
   abrirInfoBuzon(r: any) {
     this.radicadoInfoBuzon = r;
     this.tabInfoBuzon = 'informacion';
+    this.historialActual = [];
     this.mostrarPopupInfoBuzon = true;
   }
 
   cerrarInfoBuzon() {
     this.mostrarPopupInfoBuzon = false;
     this.radicadoInfoBuzon = null;
+  }
+
+  cambiarTabInfoBuzon(tab: string) {
+    this.tabInfoBuzon = tab;
+    if (tab === 'recorrido' && this.radicadoInfoBuzon && this.historialActual.length === 0) {
+      this.cargandoHistorial = true;
+      this.http.get<any[]>(`${this.apiUrl}/radicados/${encodeURIComponent(this.radicadoInfoBuzon.nro_radicado)}/historial`)
+        .subscribe({
+          next: (res) => { this.historialActual = res; this.cargandoHistorial = false; this.cd.detectChanges(); },
+          error: () => { this.cargandoHistorial = false; this.cd.detectChanges(); }
+        });
+    }
   }
 
   // --- MATRIZ DE ROLES DE USUARIO ---

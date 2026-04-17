@@ -1931,7 +1931,7 @@
           <!-- Tabs -->
           <div style="display:flex; border-bottom:2px solid #e2e8f0; margin:1rem 1.5rem 0; gap:0;">
             <button *ngFor="let t of [{k:'informacion',l:'Información'},{k:'recorrido',l:'Recorrido'},{k:'responder',l:'Responder'}]"
-                    (click)="tabInfoBuzon = t.k"
+                    (click)="cambiarTabInfoBuzon(t.k)"
                     [style.color]="tabInfoBuzon === t.k ? '#1a2b4b' : '#94a3b8'"
                     [style.border-bottom]="tabInfoBuzon === t.k ? '2px solid #1a2b4b' : '2px solid transparent'"
                     [style.font-weight]="tabInfoBuzon === t.k ? '800' : '600'"
@@ -2050,10 +2050,49 @@
 
             <!-- ── Tab: Recorrido ── -->
             <ng-container *ngIf="tabInfoBuzon === 'recorrido'">
-              <div style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
-                <div style="font-size:2rem; margin-bottom:0.6rem;">🗂️</div>
-                <p style="font-weight:700; margin:0; font-size:0.95rem;">Historial de recorrido</p>
-                <p style="font-size:0.8rem; margin-top:0.3rem;">Próximamente disponible</p>
+              <div *ngIf="cargandoHistorial" style="text-align:center; color:#94a3b8; padding:2rem;">
+                ⏳ Cargando historial...
+              </div>
+              <div *ngIf="!cargandoHistorial && historialActual.length === 0"
+                   style="text-align:center; color:#94a3b8; padding:2rem; font-weight:600;">
+                Sin historial registrado para este radicado.
+              </div>
+              <div *ngFor="let h of historialActual; let i = index" style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+                <!-- línea de tiempo -->
+                <div style="display:flex; flex-direction:column; align-items:center; min-width:36px;">
+                  <div style="width:36px; height:36px; border-radius:50%; display:flex; align-items:center;
+                               justify-content:center; font-size:1rem; font-weight:900; flex-shrink:0;"
+                       [ngStyle]="{
+                         'background': h.accion === 'CREACION'  ? '#dcfce7' :
+                                       h.accion === 'TRASLADO'  ? '#fef9c3' :
+                                       h.accion === 'ARCHIVADO' ? '#f1f5f9' : '#eff6ff',
+                         'color':      h.accion === 'CREACION'  ? '#16a34a' :
+                                       h.accion === 'TRASLADO'  ? '#d97706' :
+                                       h.accion === 'ARCHIVADO' ? '#475569' : '#7c3aed'
+                       }">
+                    {{ h.accion === 'CREACION' ? '✚' : h.accion === 'TRASLADO' ? '→' : h.accion === 'ARCHIVADO' ? '✔' : '·' }}
+                  </div>
+                  <div *ngIf="i < historialActual.length - 1"
+                       style="width:2px; flex:1; background:#e2e8f0; margin:4px 0;"></div>
+                </div>
+                <!-- contenido -->
+                <div style="flex:1; background:#f8fafc; border-radius:0.8rem; padding:0.8rem 1rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <strong style="color:#1a2b4b; font-size:0.9rem;">
+                      {{ h.accion === 'CREACION' ? 'Radicado creado' : h.accion === 'TRASLADO' ? 'Traslado de responsabilidad' : 'Archivado / Finalizado' }}
+                    </strong>
+                    <span style="font-size:0.72rem; color:#94a3b8; white-space:nowrap; margin-left:0.5rem;">{{ h.fecha | slice:0:16 }}</span>
+                  </div>
+                  <p style="margin:0.3rem 0 0; font-size:0.82rem; color:#475569;">{{ h.comentario }}</p>
+                  <div style="margin-top:0.4rem; font-size:0.78rem; color:#64748b;">
+                    <span *ngIf="h.desde_nombre"><strong>Por:</strong> {{ h.desde_nombre }}</span>
+                    <span *ngIf="h.hacia_nombre" style="margin-left:0.8rem;"><strong>→ Para:</strong> {{ h.hacia_nombre }}</span>
+                    <span *ngIf="h.estado_nuevo" style="margin-left:0.8rem;">
+                      <strong>Estado:</strong>
+                      <span class="badge-siade" style="font-size:0.7rem; padding:0.15rem 0.5rem; margin-left:0.3rem;">{{ h.estado_nuevo }}</span>
+                    </span>
+                  </div>
+                </div>
               </div>
             </ng-container>
 
