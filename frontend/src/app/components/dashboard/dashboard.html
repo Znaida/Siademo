@@ -2125,87 +2125,101 @@
                   1. Destinatario Externo
                 </p>
 
-                <!-- Predeterminado -->
-                <div style="padding:0.6rem 0.9rem; background:#f0fdf4; border-radius:0.6rem;
-                             border:1px solid #bbf7d0; margin-bottom:0.9rem; font-size:0.85rem;">
-                  <span style="font-weight:700; color:#15803d;">Predeterminado: </span>
-                  <span style="color:#1a2b4b; font-weight:600;">{{ radicadoInfoBuzon?.nombre_razon_social || '—' }}</span>
-                  <span style="font-size:0.72rem; color:#64748b; margin-left:0.5rem;">(remitente original)</span>
+                <!-- Destinatario predeterminado (solo lectura) -->
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;
+                             padding:0.7rem 1rem; background:#f0fdf4; border-radius:0.7rem; border:1px solid #bbf7d0; margin-bottom:0.9rem;">
+                  <div>
+                    <span style="font-size:0.7rem; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.04em;">Predeterminado</span>
+                    <p style="margin:0.15rem 0 0; font-size:0.88rem; font-weight:700; color:#1a2b4b;">{{ radicadoInfoBuzon?.nombre_razon_social || '—' }}</p>
+                    <p style="margin:0; font-size:0.75rem; color:#64748b;">{{ radicadoInfoBuzon?.correo || '' }}{{ radicadoInfoBuzon?.telefono ? ' · ' + radicadoInfoBuzon?.telefono : '' }}</p>
+                  </div>
+                  <button (click)="mostrarFormDestinatarioAdicional = !mostrarFormDestinatarioAdicional"
+                          [style.background]="mostrarFormDestinatarioAdicional ? '#fee2e2' : '#1a2b4b'"
+                          [style.color]="mostrarFormDestinatarioAdicional ? '#be123c' : 'white'"
+                          style="border:none; border-radius:0.5rem; padding:0.4rem 0.85rem;
+                                 font-size:0.78rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+                    {{ mostrarFormDestinatarioAdicional ? '✕ Cancelar' : '+ Agregar Destinatario' }}
+                  </button>
                 </div>
 
-                <!-- Tipo de persona -->
-                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:0.9rem;">
-                  <span style="font-size:0.78rem; font-weight:700; color:#64748b;">Tipo:</span>
-                  <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
-                    <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Natural"> Natural
-                  </label>
-                  <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
-                    <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Juridica"> Jurídica
-                  </label>
-                </div>
+                <!-- Formulario destinatario adicional (se despliega al presionar el botón) -->
+                <div *ngIf="mostrarFormDestinatarioAdicional"
+                     style="border:1px dashed #cbd5e1; border-radius:0.8rem; padding:1rem; background:#fafafa;">
+                  <p style="font-size:0.75rem; font-weight:700; color:#64748b; margin:0 0 0.8rem;">Datos del nuevo destinatario:</p>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem 1rem; margin-bottom:0.6rem;">
-                  <div>
-                    <label class="siade-label">Primer Apellido</label>
-                    <input type="text" [(ngModel)]="respuestaForm.primerApellido" class="siade-input">
+                  <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:0.8rem;">
+                    <span style="font-size:0.78rem; font-weight:700; color:#64748b;">Tipo:</span>
+                    <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
+                      <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Natural"> Natural
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
+                      <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Juridica"> Jurídica
+                    </label>
                   </div>
-                  <div>
-                    <label class="siade-label">Segundo Apellido</label>
-                    <input type="text" [(ngModel)]="respuestaForm.segundoApellido" class="siade-input">
-                  </div>
-                  <div style="grid-column:1/-1;">
-                    <label class="siade-label">Nombre o Razón Social</label>
-                    <input type="text" [(ngModel)]="respuestaForm.nombreDestinatario" class="siade-input">
-                  </div>
-                  <div>
-                    <label class="siade-label">Tipo de Documento</label>
-                    <select [(ngModel)]="respuestaForm.tipoDocDestinatario" class="siade-select">
-                      <option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option>
-                      <option value="Cédula de Extranjería">Cédula de Extranjería</option>
-                      <option value="NIT">NIT</option>
-                      <option value="Pasaporte">Pasaporte</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="siade-label">No. de Documento</label>
-                    <input type="text" [(ngModel)]="respuestaForm.nroDocDestinatario" class="siade-input">
-                  </div>
-                  <div>
-                    <label class="siade-label">Cargo</label>
-                    <input type="text" [(ngModel)]="respuestaForm.cargo" class="siade-input">
-                  </div>
-                  <div>
-                    <label class="siade-label">Teléfono</label>
-                    <input type="text" [(ngModel)]="respuestaForm.telefono" class="siade-input">
-                  </div>
-                  <div style="grid-column:1/-1;">
-                    <label class="siade-label">Correo Electrónico</label>
-                    <input type="email" [(ngModel)]="respuestaForm.correo" class="siade-input">
-                  </div>
-                  <div style="grid-column:1/-1;">
-                    <label class="siade-label">Dirección</label>
-                    <input type="text" [(ngModel)]="respuestaForm.direccion" class="siade-input">
-                  </div>
-                  <div>
-                    <label class="siade-label">País</label>
-                    <select [(ngModel)]="respuestaForm.pais" class="siade-select">
-                      <option value="Colombia">Colombia</option>
-                    </select>
-                  </div>
-                  <div></div>
-                  <div>
-                    <label class="siade-label">Departamento</label>
-                    <select [(ngModel)]="respuestaForm.departamento" (change)="onDepartamentoRespuestaChange()" class="siade-select">
-                      <option value="">— Seleccione —</option>
-                      <option *ngFor="let dep of departamentos" [value]="dep">{{ dep }}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="siade-label">Ciudad</label>
-                    <select [(ngModel)]="respuestaForm.ciudad" class="siade-select">
-                      <option value="">— Seleccione —</option>
-                      <option *ngFor="let mun of municipiosRespuesta" [value]="mun">{{ mun }}</option>
-                    </select>
+
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem 1rem;">
+                    <div>
+                      <label class="siade-label">Primer Apellido</label>
+                      <input type="text" [(ngModel)]="respuestaForm.primerApellido" class="siade-input">
+                    </div>
+                    <div>
+                      <label class="siade-label">Segundo Apellido</label>
+                      <input type="text" [(ngModel)]="respuestaForm.segundoApellido" class="siade-input">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label class="siade-label">Nombre o Razón Social</label>
+                      <input type="text" [(ngModel)]="respuestaForm.nombreDestinatario" class="siade-input">
+                    </div>
+                    <div>
+                      <label class="siade-label">Tipo de Documento</label>
+                      <select [(ngModel)]="respuestaForm.tipoDocDestinatario" class="siade-select">
+                        <option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option>
+                        <option value="Cédula de Extranjería">Cédula de Extranjería</option>
+                        <option value="NIT">NIT</option>
+                        <option value="Pasaporte">Pasaporte</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="siade-label">No. de Documento</label>
+                      <input type="text" [(ngModel)]="respuestaForm.nroDocDestinatario" class="siade-input">
+                    </div>
+                    <div>
+                      <label class="siade-label">Cargo</label>
+                      <input type="text" [(ngModel)]="respuestaForm.cargo" class="siade-input">
+                    </div>
+                    <div>
+                      <label class="siade-label">Teléfono</label>
+                      <input type="text" [(ngModel)]="respuestaForm.telefono" class="siade-input">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label class="siade-label">Correo Electrónico</label>
+                      <input type="email" [(ngModel)]="respuestaForm.correo" class="siade-input">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label class="siade-label">Dirección</label>
+                      <input type="text" [(ngModel)]="respuestaForm.direccion" class="siade-input">
+                    </div>
+                    <div>
+                      <label class="siade-label">País</label>
+                      <select [(ngModel)]="respuestaForm.pais" class="siade-select">
+                        <option value="Colombia">Colombia</option>
+                      </select>
+                    </div>
+                    <div></div>
+                    <div>
+                      <label class="siade-label">Departamento</label>
+                      <select [(ngModel)]="respuestaForm.departamento" (change)="onDepartamentoRespuestaChange()" class="siade-select">
+                        <option value="">— Seleccione —</option>
+                        <option *ngFor="let dep of departamentos" [value]="dep">{{ dep }}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="siade-label">Ciudad</label>
+                      <select [(ngModel)]="respuestaForm.ciudad" class="siade-select">
+                        <option value="">— Seleccione —</option>
+                        <option *ngFor="let mun of municipiosRespuesta" [value]="mun">{{ mun }}</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>

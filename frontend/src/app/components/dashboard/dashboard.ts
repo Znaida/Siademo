@@ -314,6 +314,7 @@ anexosBinarios: File[] = [];
     this.nombreArchivoAnexoRespuesta     = '';
     this.archivoBinarioPrincipalRespuesta = null;
     this.archivoBinarioAnexoRespuesta     = null;
+    this.mostrarFormDestinatarioAdicional = false;
   }
 
   onDepartamentoRespuestaChange() {
@@ -461,6 +462,7 @@ anexosBinarios: File[] = [];
   nombreArchivoAnexoRespuesta: string = '';
   archivoBinarioPrincipalRespuesta: File | null = null;
   archivoBinarioAnexoRespuesta: File | null = null;
+  mostrarFormDestinatarioAdicional: boolean = false;
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
