@@ -2098,11 +2098,243 @@
 
             <!-- ── Tab: Responder ── -->
             <ng-container *ngIf="tabInfoBuzon === 'responder'">
-              <div style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
-                <div style="font-size:2rem; margin-bottom:0.6rem;">↩️</div>
-                <p style="font-weight:700; margin:0; font-size:0.95rem;">Módulo de respuesta</p>
-                <p style="font-size:0.8rem; margin-top:0.3rem;">Próximamente disponible</p>
+
+              <!-- Tipo de documento -->
+              <div style="display:flex; align-items:center; gap:2rem; margin-bottom:1.2rem;
+                           padding:0.7rem 1rem; background:#f8fafc; border-radius:0.7rem;">
+                <span style="font-size:0.8rem; font-weight:700; color:#64748b;">Tipo de documento:</span>
+                <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
+                  <input type="radio" [(ngModel)]="respuestaForm.tipoDocumento" value="Interno"> Interno
+                </label>
+                <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; color:#1a2b4b; cursor:pointer;">
+                  <input type="radio" [(ngModel)]="respuestaForm.tipoDocumento" value="Externo"> Externo
+                </label>
               </div>
+
+              <!-- Remitente (sesión) -->
+              <div style="margin-bottom:1.2rem; padding:0.7rem 1rem; background:#eff6ff;
+                           border-radius:0.7rem; border-left:3px solid #2563eb;">
+                <span style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Remitente</span>
+                <p style="margin:0.2rem 0 0; font-size:0.9rem; font-weight:800; color:#1a2b4b;">{{ userRoleName }} — {{ userName || 'Usuario de sesión' }}</p>
+              </div>
+
+              <!-- ── 1. Destinatario Externo ── -->
+              <div style="margin-bottom:1.2rem;">
+                <p style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
+                           color:#94a3b8; margin:0 0 0.8rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.4rem;">
+                  1. Destinatario Externo
+                </p>
+
+                <!-- Predeterminado -->
+                <div style="padding:0.6rem 0.9rem; background:#f0fdf4; border-radius:0.6rem;
+                             border:1px solid #bbf7d0; margin-bottom:0.9rem; font-size:0.85rem;">
+                  <span style="font-weight:700; color:#15803d;">Predeterminado: </span>
+                  <span style="color:#1a2b4b; font-weight:600;">{{ radicadoInfoBuzon?.nombre_razon_social || '—' }}</span>
+                  <span style="font-size:0.72rem; color:#64748b; margin-left:0.5rem;">(remitente original)</span>
+                </div>
+
+                <!-- Tipo de persona -->
+                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:0.9rem;">
+                  <span style="font-size:0.78rem; font-weight:700; color:#64748b;">Tipo:</span>
+                  <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
+                    <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Natural"> Natural
+                  </label>
+                  <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.83rem; font-weight:600; cursor:pointer;">
+                    <input type="radio" [(ngModel)]="respuestaForm.tipoDestinatario" value="Juridica"> Jurídica
+                  </label>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem 1rem; margin-bottom:0.6rem;">
+                  <div>
+                    <label class="siade-label">Primer Apellido</label>
+                    <input type="text" [(ngModel)]="respuestaForm.primerApellido" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">Segundo Apellido</label>
+                    <input type="text" [(ngModel)]="respuestaForm.segundoApellido" class="siade-input">
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="siade-label">Nombre o Razón Social</label>
+                    <input type="text" [(ngModel)]="respuestaForm.nombreDestinatario" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">Tipo de Documento</label>
+                    <select [(ngModel)]="respuestaForm.tipoDocDestinatario" class="siade-select">
+                      <option value="Cédula de Ciudadanía">Cédula de Ciudadanía</option>
+                      <option value="Cédula de Extranjería">Cédula de Extranjería</option>
+                      <option value="NIT">NIT</option>
+                      <option value="Pasaporte">Pasaporte</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="siade-label">No. de Documento</label>
+                    <input type="text" [(ngModel)]="respuestaForm.nroDocDestinatario" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">Cargo</label>
+                    <input type="text" [(ngModel)]="respuestaForm.cargo" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">Teléfono</label>
+                    <input type="text" [(ngModel)]="respuestaForm.telefono" class="siade-input">
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="siade-label">Correo Electrónico</label>
+                    <input type="email" [(ngModel)]="respuestaForm.correo" class="siade-input">
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="siade-label">Dirección</label>
+                    <input type="text" [(ngModel)]="respuestaForm.direccion" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">País</label>
+                    <select [(ngModel)]="respuestaForm.pais" class="siade-select">
+                      <option value="Colombia">Colombia</option>
+                    </select>
+                  </div>
+                  <div></div>
+                  <div>
+                    <label class="siade-label">Departamento</label>
+                    <select [(ngModel)]="respuestaForm.departamento" (change)="onDepartamentoRespuestaChange()" class="siade-select">
+                      <option value="">— Seleccione —</option>
+                      <option *ngFor="let dep of departamentos" [value]="dep">{{ dep }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="siade-label">Ciudad</label>
+                    <select [(ngModel)]="respuestaForm.ciudad" class="siade-select">
+                      <option value="">— Seleccione —</option>
+                      <option *ngFor="let mun of municipiosRespuesta" [value]="mun">{{ mun }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── 2. Datos del Documento ── -->
+              <div style="margin-bottom:1.2rem;">
+                <p style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
+                           color:#94a3b8; margin:0 0 0.8rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.4rem;">
+                  2. Datos del Documento
+                </p>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem 1rem; margin-bottom:0.6rem;">
+                  <div>
+                    <label class="siade-label">Serie</label>
+                    <select [(ngModel)]="respuestaForm.serie" (change)="respuestaForm.tipoDocumental=''" class="siade-select">
+                      <option value="">-- Seleccione --</option>
+                      <option *ngFor="let s of getSeriesUnicas()" [value]="s.nombre">{{ s.etiqueta }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="siade-label">Subserie</label>
+                    <select [(ngModel)]="respuestaForm.subserie" (change)="respuestaForm.tipoDocumental=''" class="siade-select">
+                      <option value="">-- Seleccione --</option>
+                      <option *ngFor="let sub of getSubseriesUnicas()" [value]="sub.nombre">{{ sub.etiqueta }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="siade-label">Tipo Documental</label>
+                    <select [(ngModel)]="respuestaForm.tipoDocumental" class="siade-select">
+                      <option value="">-- Seleccione --</option>
+                      <option *ngFor="let tipo of getTiposParaSelect()" [value]="tipo">{{ tipo }}</option>
+                    </select>
+                    <span *ngIf="respuestaForm.tipoDocumental"
+                          style="display:inline-flex; align-items:center; gap:0.3rem; margin-top:0.3rem; font-size:0.68rem; font-weight:700; color:#64748b;">
+                      <span style="background:#fee2e2; color:#dc2626; padding:0.1rem 0.4rem; border-radius:4px; font-weight:800;">PDF</span> Formato
+                    </span>
+                  </div>
+                </div>
+                <div style="margin-bottom:0.6rem;">
+                  <label class="siade-label">Asunto</label>
+                  <textarea [(ngModel)]="respuestaForm.asunto" class="siade-input" style="height:75px; resize:vertical;"></textarea>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem 1rem; margin-bottom:0.6rem;">
+                  <div>
+                    <label class="siade-label">Método de Envío</label>
+                    <select [(ngModel)]="respuestaForm.metodoEnvio" class="siade-select">
+                      <option value="Físico">Físico</option>
+                      <option value="Correo Electrónico">Correo Electrónico</option>
+                      <option value="Correo Certificado">Correo Certificado</option>
+                      <option value="Portal Web">Portal Web</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="siade-label">{{ (respuestaForm.metodoEnvio === 'Correo Electrónico' || respuestaForm.metodoEnvio === 'Portal Web') ? 'Enlace' : 'No. de Guía' }}</label>
+                    <input type="text" [(ngModel)]="respuestaForm.nroGuia" class="siade-input">
+                  </div>
+                  <div>
+                    <label class="siade-label">No. de Folios</label>
+                    <input type="number" [(ngModel)]="respuestaForm.nroFolios" class="siade-input">
+                  </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem 1rem;">
+                  <div>
+                    <label class="siade-label">Anexo (Título)</label>
+                    <input type="text" [(ngModel)]="respuestaForm.anexo" class="siade-input" placeholder="Ej: CD con planos">
+                  </div>
+                  <div>
+                    <label class="siade-label">Descripción del Anexo</label>
+                    <input type="text" [(ngModel)]="respuestaForm.descripcionAnexo" class="siade-input" placeholder="Detalle del contenido...">
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Adjuntos ── -->
+              <div style="margin-bottom:1.2rem;">
+                <p style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
+                           color:#94a3b8; margin:0 0 0.8rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.4rem;">
+                  Adjuntos
+                </p>
+                <div class="upload-zone dashed" (click)="archivoPrincipalResp.click()" style="cursor:pointer; margin-bottom:0.7rem;">
+                  <span *ngIf="!nombreArchivoPrincipalRespuesta">☁️ Cargar plantilla / Documento principal</span>
+                  <span *ngIf="nombreArchivoPrincipalRespuesta" style="color:#2563eb;">📄 {{ nombreArchivoPrincipalRespuesta }}</span>
+                  <input type="file" #archivoPrincipalResp (change)="onFileRespuestaSelected($event, 'principal')" style="display:none;">
+                </div>
+                <div class="upload-zone dashed" (click)="archivoAnexoResp.click()" style="cursor:pointer;">
+                  <span *ngIf="!nombreArchivoAnexoRespuesta">➕ Adjuntar Anexos</span>
+                  <span *ngIf="nombreArchivoAnexoRespuesta" style="color:#2563eb;">📎 {{ nombreArchivoAnexoRespuesta }}</span>
+                  <input type="file" #archivoAnexoResp (change)="onFileRespuestaSelected($event, 'anexo')" style="display:none;" multiple>
+                </div>
+              </div>
+
+              <!-- ── Flujo ── -->
+              <div style="margin-bottom:1.5rem;">
+                <button (click)="respuestaForm.activaFlujo = !respuestaForm.activaFlujo"
+                        [style.background]="respuestaForm.activaFlujo ? '#f0fdf4' : '#f8fafc'"
+                        [style.border-color]="respuestaForm.activaFlujo ? '#86efac' : '#e2e8f0'"
+                        style="width:100%; padding:0.7rem 1rem; border:1px solid; border-radius:0.6rem;
+                               display:flex; align-items:center; gap:0.7rem; cursor:pointer; text-align:left;">
+                  <span style="font-size:1.1rem;">🌿</span>
+                  <span style="font-size:0.83rem; font-weight:700; color:#1a2b4b;">
+                    {{ respuestaForm.activaFlujo ? '✓ Vinculado a flujo de trabajo' : 'Este radicado hace parte de flujo (vincular a flujo)' }}
+                  </span>
+                </button>
+              </div>
+
+              <!-- ── Vista previa Sticker ── -->
+              <div style="margin-bottom:1.5rem;">
+                <p style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;
+                           color:#94a3b8; margin:0 0 0.8rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.4rem;">
+                  Vista previa del Radicado
+                </p>
+                <div style="background:#1a2b4b; border-radius:0.8rem; padding:1rem; color:white; text-align:center; max-width:280px; margin:0 auto;">
+                  <p style="font-size:0.7rem; font-weight:800; letter-spacing:0.1em; opacity:0.7; margin:0;">SIADE · COMUNICACIÓN ENVIADA</p>
+                  <p style="font-size:1rem; font-weight:900; font-family:monospace; margin:0.4rem 0;">{{ obtenerPrefijo() }}-{{ fechaActualRadicado?.slice(0,4) }}-{{ nroRadicadoSimulado }}</p>
+                  <div style="background:white; border-radius:0.5rem; padding:0.6rem; margin:0.5rem 0;">
+                    <img *ngIf="qrPreviewUrl" [src]="qrPreviewUrl" alt="QR" style="width:80px; height:80px;">
+                    <div *ngIf="!qrPreviewUrl" style="width:80px; height:80px; background:#f1f5f9; border-radius:4px; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.7rem;">QR</div>
+                  </div>
+                  <img *ngIf="barcodePreviewUrl" [src]="barcodePreviewUrl" alt="Barcode" style="width:100%; height:28px; object-fit:fill; border-radius:3px;">
+                  <div *ngIf="!barcodePreviewUrl" style="background:#e2e8f0; height:28px; border-radius:3px; margin-top:0.4rem;"></div>
+                  <p style="font-size:0.65rem; opacity:0.6; margin:0.5rem 0 0;">Vista previa — se genera al radicar</p>
+                </div>
+              </div>
+
+              <!-- ── Botón enviar ── -->
+              <div style="display:flex; justify-content:flex-end; gap:0.75rem; padding-top:0.5rem; border-top:1px solid #f1f5f9;">
+                <button class="btn-siade secondary" style="font-size:0.83rem;">💾 Guardar Borrador</button>
+                <button class="btn-siade primary" style="font-size:0.83rem;">📤 Radicar Respuesta</button>
+              </div>
+
             </ng-container>
 
           </div>

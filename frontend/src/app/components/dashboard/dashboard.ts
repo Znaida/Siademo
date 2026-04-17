@@ -276,6 +276,61 @@ anexosBinarios: File[] = [];
           error: () => { this.cargandoHistorial = false; this.cd.detectChanges(); }
         });
     }
+    if (tab === 'responder') {
+      this.inicializarRespuesta();
+    }
+  }
+
+  inicializarRespuesta() {
+    const r = this.radicadoInfoBuzon;
+    this.respuestaForm = {
+      tipoDocumento:       'Externo',
+      tipoDestinatario:    'Natural',
+      primerApellido:      '',
+      segundoApellido:     '',
+      nombreDestinatario:  r?.nombre_razon_social || '',
+      tipoDocDestinatario: r?.tipo_doc_remitente  || 'Cédula de Ciudadanía',
+      nroDocDestinatario:  r?.nro_doc_remitente   || '',
+      cargo:               r?.cargo               || '',
+      direccion:           r?.direccion           || '',
+      telefono:            r?.telefono            || '',
+      correo:              r?.correo              || '',
+      pais:                r?.pais                || 'Colombia',
+      departamento:        r?.departamento        || 'Caldas',
+      ciudad:              r?.ciudad              || 'Manizales',
+      serie:               '',
+      subserie:            '',
+      tipoDocumental:      '',
+      asunto:              r?.asunto ? `RE: ${r.asunto}` : '',
+      metodoEnvio:         'Físico',
+      nroGuia:             '',
+      nroFolios:           '',
+      anexo:               '',
+      descripcionAnexo:    '',
+      activaFlujo:         false,
+    };
+    this.municipiosRespuesta = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.respuestaForm.departamento] ?? [];
+    this.nombreArchivoPrincipalRespuesta = '';
+    this.nombreArchivoAnexoRespuesta     = '';
+    this.archivoBinarioPrincipalRespuesta = null;
+    this.archivoBinarioAnexoRespuesta     = null;
+  }
+
+  onDepartamentoRespuestaChange() {
+    this.municipiosRespuesta = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.respuestaForm.departamento] ?? [];
+    this.respuestaForm.ciudad = this.municipiosRespuesta[0] ?? '';
+  }
+
+  onFileRespuestaSelected(event: any, tipo: string) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (tipo === 'principal') {
+      this.archivoBinarioPrincipalRespuesta = file;
+      this.nombreArchivoPrincipalRespuesta  = file.name;
+    } else {
+      this.archivoBinarioAnexoRespuesta = file;
+      this.nombreArchivoAnexoRespuesta  = file.name;
+    }
   }
 
   // --- MATRIZ DE ROLES DE USUARIO ---
@@ -398,6 +453,14 @@ anexosBinarios: File[] = [];
   mostrarPopupInfoBuzon: boolean = false;
   radicadoInfoBuzon: any = null;
   tabInfoBuzon: string = 'informacion';
+
+  // --- RESPONDER EN BUZÓN ---
+  respuestaForm: any = {};
+  municipiosRespuesta: string[] = [];
+  nombreArchivoPrincipalRespuesta: string = '';
+  nombreArchivoAnexoRespuesta: string = '';
+  archivoBinarioPrincipalRespuesta: File | null = null;
+  archivoBinarioAnexoRespuesta: File | null = null;
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
