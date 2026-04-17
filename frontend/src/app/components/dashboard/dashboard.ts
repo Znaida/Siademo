@@ -254,6 +254,17 @@ anexosBinarios: File[] = [];
     this.radicadoBuzonAcciones = null;
   }
 
+  abrirInfoBuzon(r: any) {
+    this.radicadoInfoBuzon = r;
+    this.tabInfoBuzon = 'informacion';
+    this.mostrarPopupInfoBuzon = true;
+  }
+
+  cerrarInfoBuzon() {
+    this.mostrarPopupInfoBuzon = false;
+    this.radicadoInfoBuzon = null;
+  }
+
   // --- MATRIZ DE ROLES DE USUARIO ---
   rolesParametrizacion = [
     //{ ESTO HAY QE QUITARLO PARA QUE NO APAREZCA EN LA INSPECCION
@@ -370,6 +381,10 @@ anexosBinarios: File[] = [];
   mostrarSugerenciasBuzon: boolean = false;
   mostrarPopupAccionesBuzon: boolean = false;
   radicadoBuzonAcciones: any = null;
+  // Popup información del documento
+  mostrarPopupInfoBuzon: boolean = false;
+  radicadoInfoBuzon: any = null;
+  tabInfoBuzon: string = 'informacion';
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
@@ -1629,6 +1644,20 @@ limpiarFormularioRadicacion() {
         this.mostrarModalPdf = true;
       },
       error: () => Swal.fire('Sin documento', 'No se encontró el archivo adjunto para este radicado.', 'info')
+    });
+  }
+
+  descargarDocumentoRadicado(nroRadicado: string) {
+    const url = `${this.apiUrl}/radicados/${encodeURIComponent(nroRadicado)}/documento`;
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${nroRadicado}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      },
+      error: () => Swal.fire('Sin documento', 'No se encontró el archivo adjunto.', 'info')
     });
   }
 
