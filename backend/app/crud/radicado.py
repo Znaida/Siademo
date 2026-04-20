@@ -103,7 +103,12 @@ def listar_radicados(
                    r.nro_radicado_relacionado, r.hash_sha256,
                    (SELECT nro_radicado FROM radicados r2
                     WHERE r2.nro_radicado_relacionado = r.nro_radicado LIMIT 1) AS nro_respuesta,
-                   u.nombre_completo AS responsable_nombre, r.id
+                   u.nombre_completo AS responsable_nombre, r.id,
+                   r.primer_apellido, r.segundo_apellido, r.tipo_documento, r.nro_documento,
+                   r.cargo, r.telefono, r.correo_electronico, r.direccion,
+                   r.pais, r.departamento, r.ciudad,
+                   r.tipo_documental, r.nro_guia, r.dias_respuesta,
+                   r.anexo_nombre, r.descripcion_anexo, r.seccion_origen
             FROM radicados r
             LEFT JOIN usuarios u ON r.funcionario_responsable_id = u.id
         """

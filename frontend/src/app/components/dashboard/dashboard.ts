@@ -187,6 +187,7 @@ anexosBinarios: File[] = [];
     this.fechaInicioBuzon = '';
     this.fechaFinBuzon = '';
     this.mostrarSugerenciasBuzon = false;
+    if (tab === 'redactar') this.inicializarRedactar();
   }
 
   cambiarFiltroBuzon(filtro: string) {
@@ -285,19 +286,25 @@ anexosBinarios: File[] = [];
     const r = this.radicadoInfoBuzon;
     this.respuestaForm = {
       tipoDocumento:       'Externo',
-      tipoDestinatario:    'Natural',
-      primerApellido:      '',
-      segundoApellido:     '',
+      tipoDestinatario:    r?.tipo_remitente      || 'Natural',
+      primerApellido:      r?.primer_apellido     || '',
+      segundoApellido:     r?.segundo_apellido    || '',
       nombreDestinatario:  r?.nombre_razon_social || '',
-      tipoDocDestinatario: r?.tipo_doc_remitente  || 'Cédula de Ciudadanía',
-      nroDocDestinatario:  r?.nro_doc_remitente   || '',
+      tipoDocDestinatario: r?.tipo_documento      || 'Cédula de Ciudadanía',
+      nroDocDestinatario:  r?.nro_documento       || '',
       cargo:               r?.cargo               || '',
       direccion:           r?.direccion           || '',
       telefono:            r?.telefono            || '',
-      correo:              r?.correo              || '',
+      correo:              r?.correo_electronico  || '',
       pais:                r?.pais                || 'Colombia',
       departamento:        r?.departamento        || 'Caldas',
       ciudad:              r?.ciudad              || 'Manizales',
+      // Punto 2 — interno
+      seccionOrigen:       '',
+      funcionarioOrigen:   '',
+      seccionDestino:      '',
+      funcionarioDestino:  '',
+      // Punto 2 — documento
       serie:               '',
       subserie:            '',
       tipoDocumental:      '',
@@ -331,6 +338,63 @@ anexosBinarios: File[] = [];
     } else {
       this.archivoBinarioAnexoRespuesta = file;
       this.nombreArchivoAnexoRespuesta  = file.name;
+    }
+  }
+
+  inicializarRedactar() {
+    this.redactarForm = {
+      tipoDocumento:       'Externo',
+      tipoDestinatario:    'Natural',
+      primerApellido:      '',
+      segundoApellido:     '',
+      nombreDestinatario:  '',
+      tipoDocDestinatario: 'Cédula de Ciudadanía',
+      nroDocDestinatario:  '',
+      cargo:               '',
+      direccion:           '',
+      telefono:            '',
+      correo:              '',
+      pais:                'Colombia',
+      departamento:        'Caldas',
+      ciudad:              'Manizales',
+      // Interno
+      seccionOrigen:       '',
+      funcionarioOrigen:   '',
+      seccionDestino:      '',
+      funcionarioDestino:  '',
+      // Documento
+      serie:               '',
+      subserie:            '',
+      tipoDocumental:      '',
+      asunto:              '',
+      metodoEnvio:         'Físico',
+      nroGuia:             '',
+      nroFolios:           '',
+      anexo:               '',
+      descripcionAnexo:    '',
+      activaFlujo:         false,
+    };
+    this.municipiosRedactar = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS['Caldas'] ?? [];
+    this.nombreArchivoPrincipalRedactar = '';
+    this.nombreArchivoAnexoRedactar     = '';
+    this.archivoBinarioPrincipalRedactar = null;
+    this.archivoBinarioAnexoRedactar     = null;
+  }
+
+  onDepartamentoRedactarChange() {
+    this.municipiosRedactar = COLOMBIA_DEPARTAMENTOS_MUNICIPIOS[this.redactarForm.departamento] ?? [];
+    this.redactarForm.ciudad = this.municipiosRedactar[0] ?? '';
+  }
+
+  onFileRedactarSelected(event: any, tipo: string) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (tipo === 'principal') {
+      this.archivoBinarioPrincipalRedactar = file;
+      this.nombreArchivoPrincipalRedactar  = file.name;
+    } else {
+      this.archivoBinarioAnexoRedactar = file;
+      this.nombreArchivoAnexoRedactar  = file.name;
     }
   }
 
@@ -463,6 +527,14 @@ anexosBinarios: File[] = [];
   archivoBinarioPrincipalRespuesta: File | null = null;
   archivoBinarioAnexoRespuesta: File | null = null;
   mostrarFormDestinatarioAdicional: boolean = false;
+
+  // --- REDACTAR EN BUZÓN ---
+  redactarForm: any = {};
+  municipiosRedactar: string[] = [];
+  nombreArchivoPrincipalRedactar: string = '';
+  nombreArchivoAnexoRedactar: string = '';
+  archivoBinarioPrincipalRedactar: File | null = null;
+  archivoBinarioAnexoRedactar: File | null = null;
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
