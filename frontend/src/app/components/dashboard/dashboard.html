@@ -2105,7 +2105,7 @@
             </p>
             <div style="background:#1a2b4b; border-radius:0.8rem; padding:1rem; color:white; text-align:center; max-width:280px; margin:0 auto;">
               <p style="font-size:0.7rem; font-weight:800; letter-spacing:0.1em; opacity:0.7; margin:0;">SIADE · COMUNICACIÓN ENVIADA</p>
-              <p style="font-size:1rem; font-weight:900; font-family:monospace; margin:0.4rem 0;">{{ obtenerPrefijo() }}-{{ fechaActualRadicado?.slice(0,4) }}-{{ nroRadicadoSimulado }}</p>
+              <p style="font-size:1rem; font-weight:900; font-family:monospace; margin:0.4rem 0;">{{ obtenerPrefijo() }}-{{ fechaActualRadicado.slice(0,4) }}-{{ nroRadicadoSimulado }}</p>
               <div style="background:white; border-radius:0.5rem; padding:0.6rem; margin:0.5rem 0;">
                 <img *ngIf="qrPreviewUrl" [src]="qrPreviewUrl" alt="QR" style="width:80px; height:80px;">
                 <div *ngIf="!qrPreviewUrl" style="width:80px; height:80px; background:#f1f5f9; border-radius:4px; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.7rem;">QR</div>
@@ -2651,7 +2651,7 @@
                 </p>
                 <div style="background:#1a2b4b; border-radius:0.8rem; padding:1rem; color:white; text-align:center; max-width:280px; margin:0 auto;">
                   <p style="font-size:0.7rem; font-weight:800; letter-spacing:0.1em; opacity:0.7; margin:0;">SIADE · COMUNICACIÓN ENVIADA</p>
-                  <p style="font-size:1rem; font-weight:900; font-family:monospace; margin:0.4rem 0;">{{ obtenerPrefijo() }}-{{ fechaActualRadicado?.slice(0,4) }}-{{ nroRadicadoSimulado }}</p>
+                  <p style="font-size:1rem; font-weight:900; font-family:monospace; margin:0.4rem 0;">{{ obtenerPrefijo() }}-{{ fechaActualRadicado.slice(0,4) }}-{{ nroRadicadoSimulado }}</p>
                   <div style="background:white; border-radius:0.5rem; padding:0.6rem; margin:0.5rem 0;">
                     <img *ngIf="qrPreviewUrl" [src]="qrPreviewUrl" alt="QR" style="width:80px; height:80px;">
                     <div *ngIf="!qrPreviewUrl" style="width:80px; height:80px; background:#f1f5f9; border-radius:4px; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.7rem;">QR</div>
