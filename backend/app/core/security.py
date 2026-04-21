@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import HTTPException, Request
 from jose import jwt, JWTError
 from app.core.config import SECRET_KEY, ALGORITHM, pwd_context
-from app.core.database import get_db_connection
+from app.core.database import get_db_connection, is_postgres
 
 
 def firmar_resultado(resultado: int) -> str:
@@ -77,22 +77,41 @@ def generar_consecutivo(prefijo: str) -> str:
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute(
-            "UPDATE secuencia_radicados SET ultimo_numero = ultimo_numero + 1 WHERE prefijo = ? AND anio = ?",
-            (prefijo, anio_actual)
-        )
-        if cur.rowcount == 0:
+        if is_postgres():
+            # PostgreSQL (Azure/Supabase): UPSERT atómico con RETURNING.
+            # Una sola operación — nunca hay race condition sin importar
+            # cuántos usuarios radiquen al mismo tiempo.
             cur.execute(
-                "INSERT INTO secuencia_radicados (prefijo, anio, ultimo_numero) VALUES (?, ?, 1)",
-                (prefijo, anio_actual)
-            )
-            nuevo_valor = 1
-        else:
-            cur.execute(
-                "SELECT ultimo_numero FROM secuencia_radicados WHERE prefijo = ? AND anio = ?",
+                """
+                INSERT INTO secuencia_radicados (prefijo, anio, ultimo_numero)
+                VALUES (?, ?, 1)
+                ON CONFLICT (prefijo, anio) DO UPDATE
+                  SET ultimo_numero = secuencia_radicados.ultimo_numero + 1
+                RETURNING ultimo_numero
+                """,
                 (prefijo, anio_actual)
             )
             nuevo_valor = cur.fetchone()['ultimo_numero']
+        else:
+            # SQLite (local): BEGIN EXCLUSIVE bloquea la BD para que el
+            # UPDATE + SELECT sean atómicos.
+            conn.execute("BEGIN EXCLUSIVE")
+            cur.execute(
+                "UPDATE secuencia_radicados SET ultimo_numero = ultimo_numero + 1 WHERE prefijo = ? AND anio = ?",
+                (prefijo, anio_actual)
+            )
+            if cur.rowcount == 0:
+                cur.execute(
+                    "INSERT INTO secuencia_radicados (prefijo, anio, ultimo_numero) VALUES (?, ?, 1)",
+                    (prefijo, anio_actual)
+                )
+                nuevo_valor = 1
+            else:
+                cur.execute(
+                    "SELECT ultimo_numero FROM secuencia_radicados WHERE prefijo = ? AND anio = ?",
+                    (prefijo, anio_actual)
+                )
+                nuevo_valor = cur.fetchone()['ultimo_numero']
         conn.commit()
         return f"{prefijo}-{anio_actual}-{nuevo_valor:05d}"
     except Exception as e:
