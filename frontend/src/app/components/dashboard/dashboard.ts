@@ -535,6 +535,8 @@ anexosBinarios: File[] = [];
   nombreArchivoAnexoRedactar: string = '';
   archivoBinarioPrincipalRedactar: File | null = null;
   archivoBinarioAnexoRedactar: File | null = null;
+  cargandoRedactar: boolean = false;
+  cargandoRespuesta: boolean = false;
   // --- ARCHIVO CENTRAL ---
   listaArchivoCentral: any[] = [];
   filtrosArchivo = { q: '', anio: 0, serie: '', caja: '', disposicion: '' };
@@ -2190,6 +2192,152 @@ limpiarFormularioRadicacion() {
           Swal.fire('❌ Error', err.error?.detail || 'Fallo de servidor', 'error');
         }
       });
+  }
+
+  // ── BUZÓN: Radicar desde tab Redactar ────────────────────────────────────
+  radicarRedactar() {
+    const f = this.redactarForm;
+
+    if (!f.asunto?.trim()) {
+      Swal.fire('Atención', 'El asunto es obligatorio.', 'warning'); return;
+    }
+    if (!f.serie?.trim()) {
+      Swal.fire('Atención', 'Seleccione una serie documental.', 'warning'); return;
+    }
+    if (!this.archivoBinarioPrincipalRedactar) {
+      Swal.fire('Atención', 'Debe adjuntar el documento principal.', 'warning'); return;
+    }
+
+    const metadata = {
+      tipo_radicado:           'ENVIADA',
+      tipo_remitente:          f.tipoDestinatario    || 'Natural',
+      primer_apellido:         (f.primerApellido     || '').toUpperCase(),
+      segundo_apellido:        (f.segundoApellido    || '').toUpperCase(),
+      nombre_razon_social:     (f.nombreDestinatario || '').toUpperCase(),
+      tipo_documento:          f.tipoDocDestinatario || 'Cédula de Ciudadanía',
+      nro_documento:           f.nroDocDestinatario  || '',
+      cargo:                   (f.cargo              || '').toUpperCase(),
+      direccion:               (f.direccion          || '').toUpperCase(),
+      telefono:                f.telefono            || '',
+      correo_electronico:      f.correo              || '',
+      pais:                    f.pais                || 'Colombia',
+      departamento:            f.departamento        || 'Caldas',
+      ciudad:                  f.ciudad              || 'Manizales',
+      serie:                   f.serie               || '',
+      subserie:                f.subserie            || '',
+      tipo_documental:         f.tipoDocumental      || '',
+      asunto:                  (f.asunto             || '').toUpperCase(),
+      metodo_recepcion:        f.metodoEnvio         || 'Físico',
+      nro_guia:                f.nroGuia             || '',
+      nro_folios:              Number(f.nroFolios)   || 1,
+      dias_respuesta:          15,
+      seccion_origen:          f.seccionOrigen       || '',
+      funcionario_origen_id:   this.userId,
+      seccion_responsable:     f.seccionDestino      || f.seccionOrigen || '',
+      funcionario_responsable_id: this.userId,
+      con_copia:               '',
+      nro_radicado_relacionado: null,
+      activa_flujo_id:         f.activaFlujo ? 1 : null,
+    };
+
+    const formData = new FormData();
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('archivo_principal', this.archivoBinarioPrincipalRedactar);
+    if (this.archivoBinarioAnexoRedactar) {
+      formData.append('anexos', this.archivoBinarioAnexoRedactar);
+    }
+
+    this.cargandoRedactar = true;
+    this.http.post<any>(`${this.apiUrl}/radicar`, formData).subscribe({
+      next: (res) => {
+        this.cargandoRedactar = false;
+        const nro = res.nro_radicado || res.numero || '—';
+        Swal.fire('✅ Radicado enviado', `Número asignado: ${nro}`, 'success');
+        this.inicializarRedactar();
+        this.cargarRadicados();
+        this.obtenerEventos();
+      },
+      error: (err) => {
+        this.cargandoRedactar = false;
+        Swal.fire('❌ Error', err.error?.detail || 'Fallo al radicar.', 'error');
+      }
+    });
+  }
+
+  // ── BUZÓN: Radicar desde tab Responder ───────────────────────────────────
+  radicarRespuesta() {
+    const f = this.respuestaForm;
+
+    if (!f.asunto?.trim()) {
+      Swal.fire('Atención', 'El asunto es obligatorio.', 'warning'); return;
+    }
+    if (!f.serie?.trim()) {
+      Swal.fire('Atención', 'Seleccione una serie documental.', 'warning'); return;
+    }
+    if (!this.archivoBinarioPrincipalRespuesta) {
+      Swal.fire('Atención', 'Debe adjuntar el documento de respuesta.', 'warning'); return;
+    }
+
+    const metadata = {
+      tipo_radicado:           'ENVIADA',
+      tipo_remitente:          f.tipoDestinatario    || 'Natural',
+      primer_apellido:         (f.primerApellido     || '').toUpperCase(),
+      segundo_apellido:        (f.segundoApellido    || '').toUpperCase(),
+      nombre_razon_social:     (f.nombreDestinatario || '').toUpperCase(),
+      tipo_documento:          f.tipoDocDestinatario || 'Cédula de Ciudadanía',
+      nro_documento:           f.nroDocDestinatario  || '',
+      cargo:                   (f.cargo              || '').toUpperCase(),
+      direccion:               (f.direccion          || '').toUpperCase(),
+      telefono:                f.telefono            || '',
+      correo_electronico:      f.correo              || '',
+      pais:                    f.pais                || 'Colombia',
+      departamento:            f.departamento        || 'Caldas',
+      ciudad:                  f.ciudad              || 'Manizales',
+      serie:                   f.serie               || '',
+      subserie:                f.subserie            || '',
+      tipo_documental:         f.tipoDocumental      || '',
+      asunto:                  (f.asunto             || '').toUpperCase(),
+      metodo_recepcion:        f.metodoEnvio         || 'Físico',
+      nro_guia:                f.nroGuia             || '',
+      nro_folios:              Number(f.nroFolios)   || 1,
+      dias_respuesta:          15,
+      seccion_origen:          f.seccionOrigen       || '',
+      funcionario_origen_id:   this.userId,
+      seccion_responsable:     f.seccionDestino      || f.seccionOrigen || '',
+      funcionario_responsable_id: this.userId,
+      con_copia:               '',
+      // Enlaza este ENV con el RAD que se está respondiendo
+      nro_radicado_relacionado: this.radicadoInfoBuzon?.nro_radicado || null,
+      activa_flujo_id:         f.activaFlujo ? 1 : null,
+    };
+
+    const formData = new FormData();
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('archivo_principal', this.archivoBinarioPrincipalRespuesta);
+    if (this.archivoBinarioAnexoRespuesta) {
+      formData.append('anexos', this.archivoBinarioAnexoRespuesta);
+    }
+
+    this.cargandoRespuesta = true;
+    this.http.post<any>(`${this.apiUrl}/radicar`, formData).subscribe({
+      next: (res) => {
+        this.cargandoRespuesta = false;
+        const nro = res.nro_radicado || res.numero || '—';
+        const relacionado = this.radicadoInfoBuzon?.nro_radicado;
+        Swal.fire(
+          '✅ Respuesta radicada',
+          `Número asignado: <b>${nro}</b>${relacionado ? `<br><small>Responde a: ${relacionado}</small>` : ''}`,
+          'success'
+        );
+        this.cerrarInfoBuzon();
+        this.cargarRadicados();
+        this.obtenerEventos();
+      },
+      error: (err) => {
+        this.cargandoRespuesta = false;
+        Swal.fire('❌ Error', err.error?.detail || 'Fallo al radicar la respuesta.', 'error');
+      }
+    });
   }
 
   cargarAuditLogs(page: number = 1) {

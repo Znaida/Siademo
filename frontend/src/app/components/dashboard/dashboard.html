@@ -2119,7 +2119,11 @@
           <!-- ── Botones ── -->
           <div style="display:flex; justify-content:flex-end; gap:0.75rem; padding-top:0.5rem; border-top:1px solid #f1f5f9;">
             <button class="btn-siade secondary" style="font-size:0.83rem;">💾 Guardar Borrador</button>
-            <button class="btn-siade primary" style="font-size:0.83rem;">📤 Radicar</button>
+            <button class="btn-siade primary" style="font-size:0.83rem;"
+                    (click)="radicarRedactar()"
+                    [disabled]="cargandoRedactar">
+              {{ cargandoRedactar ? '⏳ Radicando...' : '📤 Radicar' }}
+            </button>
           </div>
 
         </div>
@@ -2665,7 +2669,11 @@
               <!-- ── Botón enviar ── -->
               <div style="display:flex; justify-content:flex-end; gap:0.75rem; padding-top:0.5rem; border-top:1px solid #f1f5f9;">
                 <button class="btn-siade secondary" style="font-size:0.83rem;">💾 Guardar Borrador</button>
-                <button class="btn-siade primary" style="font-size:0.83rem;">📤 Radicar Respuesta</button>
+                <button class="btn-siade primary" style="font-size:0.83rem;"
+                        (click)="radicarRespuesta()"
+                        [disabled]="cargandoRespuesta">
+                  {{ cargandoRespuesta ? '⏳ Radicando...' : '📤 Radicar Respuesta' }}
+                </button>
               </div>
 
             </ng-container>

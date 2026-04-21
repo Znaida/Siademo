@@ -448,15 +448,20 @@ def registrar_evento(usuario_id, accion, modulo, detalle, request: Request):
 def generar_consecutivo(prefijo: str):
     anio_actual = datetime.now().year
     conn = get_db_connection()
-    cur = conn.cursor()
     try:
+        # BEGIN EXCLUSIVE: bloquea la BD completa para esta transacción.
+        # Garantiza que el UPDATE + SELECT son atómicos aunque lleguen dos
+        # solicitudes de radicación al mismo tiempo (ej: Buzón + Ventanilla).
+        conn.execute("BEGIN EXCLUSIVE")
+        cur = conn.cursor()
+
         # Intentamos actualizar primero
         cur.execute("""
-            UPDATE secuencia_radicados 
-            SET ultimo_numero = ultimo_numero + 1 
+            UPDATE secuencia_radicados
+            SET ultimo_numero = ultimo_numero + 1
             WHERE prefijo = ? AND anio = ?
         """, (prefijo, anio_actual))
-        
+
         # Si no actualizó nada (es el primero del año), insertamos
         if cur.rowcount == 0:
             cur.execute("""
@@ -467,7 +472,7 @@ def generar_consecutivo(prefijo: str):
         else:
             cur.execute("SELECT ultimo_numero FROM secuencia_radicados WHERE prefijo = ? AND anio = ?", (prefijo, anio_actual))
             nuevo_valor = cur.fetchone()[0]
-            
+
         conn.commit()
         return f"{prefijo}-{anio_actual}-{nuevo_valor:05d}"
     except Exception as e:
@@ -475,7 +480,7 @@ def generar_consecutivo(prefijo: str):
         print(f"Error en consecutivo: {e}")
         return None
     finally:
-        cur.close(); conn.close()
+        conn.close()
 
 # --- 7. SETUP INICIAL (solo funciona si no hay ningún admin) ---
 
