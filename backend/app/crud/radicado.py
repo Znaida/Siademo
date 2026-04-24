@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, date
 from fastapi import HTTPException
 from app.core.database import get_db_connection
 from app.schemas.radicado import RadicadoCreate, TrasladoData, ArchivarData
+from app.core.ws_manager import manager
 
 
 def crear_radicado(
@@ -67,6 +68,15 @@ def crear_radicado(
             )
 
         conn.commit()
+
+        # Notificar en tiempo real al funcionario responsable
+        if data.funcionario_responsable_id and data.funcionario_responsable_id != creado_por:
+            manager.emit(data.funcionario_responsable_id, {
+                "evento": "radicado:nuevo",
+                "nro_radicado": nro_radicado,
+                "mensaje": f"Nuevo documento asignado a tu responsabilidad: {nro_radicado}"
+            })
+
         return {"nro_radicado": nro_radicado, "vencimiento": str(vencimiento.date())}
     except Exception as e:
         conn.rollback()
@@ -235,6 +245,14 @@ def trasladar_radicado(nro_radicado: str, data: TrasladoData, user_id: int, rol:
              f"Documento trasladado a tu responsabilidad: {nro_radicado}")
         )
         conn.commit()
+
+        # Notificar en tiempo real al nuevo responsable
+        manager.emit(data.nuevo_responsable_id, {
+            "evento": "radicado:trasladado",
+            "nro_radicado": nro_radicado,
+            "mensaje": f"Documento trasladado a tu responsabilidad: {nro_radicado}"
+        })
+
         return {"mensaje": f"Trasladado a {nuevo_resp['nombre_completo']}."}
     except HTTPException:
         raise
@@ -272,6 +290,14 @@ def archivar_radicado(nro_radicado: str, data: ArchivarData, user_id: int, rol: 
             VALUES (?, 'ARCHIVADO', ?, ?, NULL, 'Archivado')
         """, (nro_radicado, data.comentario or "Radicado archivado y finalizado.", user_id))
         conn.commit()
+
+        # Notificar en tiempo real al usuario que archivó
+        manager.emit(user_id, {
+            "evento": "radicado:archivado",
+            "nro_radicado": nro_radicado,
+            "mensaje": f"Radicado {nro_radicado} archivado correctamente."
+        })
+
         return {"mensaje": "Radicado archivado correctamente."}
     except HTTPException:
         raise

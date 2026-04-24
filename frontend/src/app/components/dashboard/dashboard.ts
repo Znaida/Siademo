@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { jwtDecode } from 'jwt-decode';
 import { interval, Subscription } from 'rxjs';
+import { WebsocketService } from '../../services/websocket.service';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
@@ -627,6 +628,7 @@ anexosBinarios: File[] = [];
   userParaAsignar: any = null;
 
   private auditSubscription?: Subscription;
+  private wsSubscription?: Subscription;
   private relojInterval?: ReturnType<typeof setInterval>;
 
   nuevoUser = {
@@ -647,7 +649,8 @@ anexosBinarios: File[] = [];
     private router: Router,
     private http: HttpClient,
     private cd: ChangeDetectorRef,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private wsService: WebsocketService
   ) {}
 
   ngOnInit() {
@@ -684,6 +687,17 @@ anexosBinarios: File[] = [];
         this.cargarListaGrupos();
         this.cargarUsuariosActivos();
         this.cargarNotificaciones();
+
+        // Conectar WebSocket y escuchar eventos en tiempo real
+        this.wsService.conectar(token);
+        this.wsSubscription = this.wsService.eventos$.subscribe(evt => {
+          this.cargarNotificaciones();
+          if (evt.evento === 'radicado:nuevo' || evt.evento === 'radicado:trasladado') {
+            this.cargarRadicados();
+          }
+          this.cd.detectChanges();
+        });
+
         this.cargarKpis();
         this.cargarGraficas();
 
@@ -2946,6 +2960,10 @@ limpiarFormularioRadicacion() {
     if (this.auditSubscription) {
       this.auditSubscription.unsubscribe();
     }
+    if (this.wsSubscription) {
+      this.wsSubscription.unsubscribe();
+    }
+    this.wsService.desconectar();
     if (this.chartBarras) { this.chartBarras.destroy(); }
     if (this.chartDona) { this.chartDona.destroy(); }
     if (this.chartLinea) { this.chartLinea.destroy(); }
