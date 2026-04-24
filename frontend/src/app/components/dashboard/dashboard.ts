@@ -2512,6 +2512,16 @@ limpiarFormularioRadicacion() {
     this.cd.detectChanges();
   }
 
+  getSemaforoANS(fechaVencimiento: string): { color: string; bg: string; icono: string; label: string } {
+    if (!fechaVencimiento) return { color: '#64748b', bg: '#f1f5f9', icono: '○', label: 'Sin fecha' };
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const vence = new Date(fechaVencimiento + 'T00:00:00');
+    const dias = Math.ceil((vence.getTime() - hoy.getTime()) / 86400000);
+    if (dias < 0)  return { color: '#dc2626', bg: '#fee2e2', icono: '🔴', label: 'Vencido' };
+    if (dias <= 5) return { color: '#d97706', bg: '#fef9c3', icono: '🟡', label: `${dias}d` };
+    return          { color: '#16a34a', bg: '#dcfce7', icono: '🟢', label: `${dias}d` };
+  }
+
   getRoleName(rolId: number): string {
     const roles: { [key: number]: string } = {
       0: 'Super Administrador',

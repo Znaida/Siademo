@@ -1825,10 +1825,14 @@
                 <td (click)="abrirInfoBuzon(r)" style="font-size:0.85rem;">{{ r.nombre_razon_social || '—' }}</td>
                 <td (click)="abrirInfoBuzon(r)" style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85rem;">{{ r.asunto || '—' }}</td>
                 <td (click)="abrirInfoBuzon(r)">
-                  <span [ngStyle]="{'color': r.fecha_vencimiento && r.fecha_vencimiento < fechaActualRadicado ? '#ef4444' : '#16a34a',
-                                    'font-weight': '700', 'font-size': '0.82rem'}">
-                    {{ r.fecha_vencimiento || '—' }}
-                  </span>
+                  <ng-container *ngIf="getSemaforoANS(r.fecha_vencimiento) as ans">
+                    <span [ngStyle]="{'background': ans.bg, 'color': ans.color,
+                                      'font-weight': '700', 'font-size': '0.75rem',
+                                      'padding': '0.2rem 0.55rem', 'border-radius': '20px',
+                                      'white-space': 'nowrap', 'display': 'inline-block'}">
+                      {{ ans.icono }} {{ r.fecha_vencimiento || '—' }}
+                    </span>
+                  </ng-container>
                 </td>
                 <td style="text-align:center;">
                   <button (click)="abrirAccionesBuzon(r)"
@@ -2849,9 +2853,14 @@
                 </span>
               </td>
               <td>
-                <span [ngStyle]="{'color': r.fecha_vencimiento && r.fecha_vencimiento < fechaActualRadicado ? '#ef4444' : '#16a34a'}">
-                  {{ r.fecha_vencimiento || '---' }}
-                </span>
+                <ng-container *ngIf="getSemaforoANS(r.fecha_vencimiento) as ans">
+                  <span [ngStyle]="{'background': ans.bg, 'color': ans.color,
+                                    'font-weight': '700', 'font-size': '0.75rem',
+                                    'padding': '0.2rem 0.55rem', 'border-radius': '20px',
+                                    'white-space': 'nowrap', 'display': 'inline-block'}">
+                    {{ ans.icono }} {{ r.fecha_vencimiento || '---' }}
+                  </span>
+                </ng-container>
               </td>
               <td style="text-align: center;">{{ r.nro_folios ?? '---' }}</td>
               <td style="text-align: center;">
