@@ -350,7 +350,15 @@ def crear_radicados(conn, cur, user_ids):
         # Fechas distribuidas en los últimos 6 meses
         dias_atras = random.randint(1, 180)
         fecha = (datetime.now() - timedelta(days=dias_atras)).strftime("%Y-%m-%d %H:%M:%S")
-        fecha_venc = (datetime.now() + timedelta(days=random.randint(5, 30))).strftime("%Y-%m-%d")
+        # Distribución ANS: 40% verde, 30% amarillo, 30% rojo
+        rand = i % 10
+        if rand < 4:    # 🟢 Verde: más de 5 días
+            delta_venc = random.randint(6, 30)
+        elif rand < 7:  # 🟡 Amarillo: 1-5 días
+            delta_venc = random.randint(1, 5)
+        else:           # 🔴 Rojo: vencido
+            delta_venc = -random.randint(1, 15)
+        fecha_venc = (datetime.now() + timedelta(days=delta_venc)).strftime("%Y-%m-%d")
 
         remitente = REMITENTES[i % len(REMITENTES)]
         serie_data = SERIES[i % len(SERIES)]
@@ -456,15 +464,31 @@ def main():
         crear_trazabilidad(conn, cur, radicados)
 
         print("\n✅ Seed completado exitosamente!")
-        print("   Usuarios creados:", len(USUARIOS))
-        print("   Radicados creados: 30")
-        print(f"   Dependencias: {len(DEPENDENCIAS)}")
-        print(f"   TRD: {len(SERIES)} series/subseries")
-        print("\n   Credenciales de prueba:")
-        print("   - admin / Admin2026 (administrador)")
+        print("=" * 58)
+        print("  DATOS DEMO LISTOS — SIADE")
+        print("=" * 58)
+        print(f"  Usuarios creados  : {len(USUARIOS)}")
+        print(f"  Radicados creados : 30")
+        print(f"  Dependencias      : {len(DEPENDENCIAS)}")
+        print(f"  Series TRD        : {len(SERIES)}")
+        print()
+        print("  CREDENCIALES")
+        print("  ┌──────────────────┬────────────────┬─────────────────────┐")
+        print("  │ Usuario          │ Contraseña     │ Rol                 │")
+        print("  ├──────────────────┼────────────────┼─────────────────────┤")
+        print("  │ admin            │ Admin2026!     │ Super Administrador │")
         for u, p, n, r in USUARIOS:
-            print(f"   - {u} / {p} ({n})")
-        print("   2FA para todos: JBSWY3DPEHPK3PXP")
+            roles = {0:'Super Admin', 1:'Administrador', 2:'Productor', 3:'Consultor'}
+            print(f"  │ {u:<16} │ {p:<14} │ {roles.get(r,'?'):<19} │")
+        print("  └──────────────────┴────────────────┴─────────────────────┘")
+        print()
+        print("  2FA secret (todos): JBSWY3DPEHPK3PXP")
+        print()
+        print("  SEMÁFORO ANS (distribución aproximada en 30 radicados)")
+        print("  🟢 Verde   (>5 días) : ~12 radicados")
+        print("  🟡 Amarillo (1-5d)   : ~9 radicados")
+        print("  🔴 Rojo    (vencido) : ~9 radicados")
+        print("=" * 58)
 
     except Exception as e:
         conn.rollback()
